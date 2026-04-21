@@ -1,0 +1,692 @@
+---
+// Página 2 — Visualização, lançamento de resultados e acompanhamento.
+// Renderização feita no cliente a partir do Tournament salvo no localStorage.
+import MainLayout from '../layouts/main.astro';
+---
+
+<MainLayout title="CopaCrista — Torneio">
+	<main class="max-w-7xl mx-auto px-5 py-8 md:py-10">
+		<!-- Cabeçalho -->
+		<header id="tournament-header" class="cc-animate-in"></header>
+
+		<!-- Banner do campeão (aparece quando definido) -->
+		<section id="champion-banner" class="hidden"></section>
+
+		<!-- Grade de cards das fases -->
+		<section id="phases"></section>
+
+		<p id="empty-state" class="hidden text-center text-slate-500 mt-10">
+			Torneio não encontrado. <a href="/" class="text-blue-600 underline">Ver meus torneios</a>.
+		</p>
+	</main>
+</MainLayout>
+
+<script>
+	import { getTournament, saveTournament, deleteTournament } from '../lib/storage';
+	import {
+		updateTournament,
+		calculateStandings,
+		matchWinner,
+		SPORT_LABEL, FORMAT_LABEL, GENDER_LABEL,
+		diffLabel, diffTitle,
+	} from '../lib/tournament';
+	import type { Match, Phase, Sport, Tournament } from '../lib/types';
+
+	// ---------- Estado e helpers ----------
+
+	type ViewMode = 'compact' | 'overview';
+	const VIEW_KEY = 'copacrista:viewmode';
+
+	// Carrega pelo ID da URL: /tournament?id=t-xxxxx
+	const params = new URLSearchParams(window.location.search);
+	const tournamentId = params.get('id') ?? '';
+	let tournament: Tournament | null = tournamentId ? getTournament(tournamentId) : null;
+	let viewMode: ViewMode = (localStorage.getItem(VIEW_KEY) as ViewMode) || 'compact';
+	const expanded = new Set<string>(); // IDs das fases abertas no modo compacto.
+	// Índice da rodada exibida atualmente no carrossel de cada grupo (modo Visão Geral).
+	const currentRoundByPhase = new Map<string, number>();
+
+	const headerEl  = document.getElementById('tournament-header') as HTMLElement;
+	const bannerEl  = document.getElementById('champion-banner')   as HTMLElement;
+	const phasesEl  = document.getElementById('phases')            as HTMLElement;
+	const emptyEl   = document.getElementById('empty-state')       as HTMLElement;
+
+	if (!tournament) {
+		phasesEl.classList.add('hidden');
+		headerEl.classList.add('hidden');
+		emptyEl.classList.remove('hidden');
+	} else {
+		// Expande por padrão a primeira fase ativa (ou a primeira).
+		const firstActive = tournament.phases.find(p => p.status !== 'completed') ?? tournament.phases[0];
+		if (firstActive) expanded.add(firstActive.id);
+		render();
+	}
+
+	// ---------- Renderização ----------
+
+	function render(): void {
+		if (!tournament) return;
+		tournament = updateTournament(tournament);
+		saveTournament(tournament);
+		// Container muda conforme o modo de visualização.
+		phasesEl.className = viewMode === 'overview' ? 'space-y-6' : 'cc-grid-auto';
+		renderHeader();
+		renderChampion();
+		renderPhases();
+	}
+
+	function renderHeader(): void {
+		if (!tournament) return;
+		const { sport, gender, format, teams } = tournament.config;
+		headerEl.innerHTML = `
+			<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+				<div>
+					<a href="/" class="inline-flex items-center gap-1 text-sm text-blue-700 hover:text-blue-900 font-medium mb-2">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+						Meus torneios
+					</a>
+					<h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+						Campeonato ${escapeHtml(GENDER_LABEL[gender])} de ${escapeHtml(SPORT_LABEL[sport])}
+					</h1>
+					<p class="text-slate-600 text-sm mt-1">
+						${escapeHtml(FORMAT_LABEL[format])} • ${teams.length} times participantes
+					</p>
+				</div>
+				<div class="flex gap-3 flex-wrap">
+					<button id="btn-view" class="cc-btn cc-btn-ghost" type="button" title="Alternar entre modo compacto e visão geral">
+						${viewMode === 'overview'
+							? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Modo Compacto`
+							: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>Visão Geral`}
+					</button>
+					<button id="btn-reset" class="cc-btn cc-btn-danger" type="button">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+						Excluir torneio
+					</button>
+				</div>
+			</div>
+		`;
+		document.getElementById('btn-reset')?.addEventListener('click', () => {
+			if (!tournament) return;
+			if (confirm(`Excluir "${tournament.name}"? Essa ação não pode ser desfeita.`)) {
+				deleteTournament(tournament.id);
+				window.location.href = '/';
+			}
+		});
+		document.getElementById('btn-view')?.addEventListener('click', () => {
+			viewMode = viewMode === 'overview' ? 'compact' : 'overview';
+			localStorage.setItem(VIEW_KEY, viewMode);
+			render();
+		});
+	}
+
+	function renderChampion(): void {
+		if (!tournament || !tournament.champion) {
+			bannerEl.classList.add('hidden');
+			bannerEl.innerHTML = '';
+			return;
+		}
+		bannerEl.classList.remove('hidden');
+		bannerEl.className = 'cc-champion cc-pop-in rounded-3xl px-6 py-5 md:py-6 mb-8 flex items-center gap-5 shadow-lg';
+		bannerEl.innerHTML = `
+			<div class="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/30 grid place-items-center shrink-0">
+				<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+					<path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+					<path d="M4 22h16"/>
+					<path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+					<path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+					<path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+				</svg>
+			</div>
+			<div>
+				<p class="text-xs md:text-sm font-semibold uppercase tracking-widest opacity-80">🏆 Campeão</p>
+				<p class="text-2xl md:text-3xl font-extrabold leading-tight">${escapeHtml(tournament.champion)}</p>
+			</div>
+		`;
+	}
+
+	function renderPhases(): void {
+		if (!tournament) return;
+		phasesEl.innerHTML = '';
+		tournament.phases.forEach((phase, idx) => {
+			const card = document.createElement('article');
+			card.className = 'cc-card rounded-2xl overflow-hidden cc-animate-in';
+			card.dataset.phaseId = phase.id;
+			// No modo visão geral os cards ficam sempre abertos.
+			card.dataset.expanded = viewMode === 'overview' ? 'true' : (expanded.has(phase.id) ? 'true' : 'false');
+			card.style.animationDelay = `${idx * 40}ms`;
+			card.innerHTML = viewMode === 'overview' ? phaseCardOverviewHtml(phase) : phaseCardHtml(phase);
+			phasesEl.appendChild(card);
+		});
+		attachCardListeners();
+	}
+
+	function phaseCardHtml(phase: Phase): string {
+		const isStandings = phase.type === 'standings';
+		const sport = tournament!.config.sport;
+
+		const matchesCount = phase.matches.length;
+		const playedCount  = phase.matches.filter(m => m.played).length;
+		const teamsCount   = phase.type === 'standings'
+			? tournament!.config.teams.length
+			: (phase.teams.length || uniqueTeamsInMatches(phase.matches).length);
+
+		const statusText = phase.status === 'completed' ? 'Concluída'
+			: phase.status === 'in-progress' ? 'Em andamento'
+			: 'Pendente';
+		const statusClass = phase.status === 'completed' ? 'cc-badge-done'
+			: phase.status === 'in-progress' ? 'cc-badge-progress'
+			: 'cc-badge-pending';
+
+		const phaseIcon = iconForPhase(phase.type);
+
+		return `
+			<button class="cc-card-toggle w-full text-left px-5 md:px-6 py-5 flex items-center gap-4 focus:outline-none">
+				<div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white grid place-items-center shadow-md shadow-blue-500/30 shrink-0">
+					${phaseIcon}
+				</div>
+				<div class="flex-1 min-w-0">
+					<div class="flex items-center gap-2 flex-wrap">
+						<h3 class="font-bold text-slate-900 text-base md:text-lg truncate">${escapeHtml(phase.name)}</h3>
+						<span class="cc-badge ${statusClass}"><span class="cc-dot"></span>${statusText}</span>
+					</div>
+					<p class="text-xs md:text-sm text-slate-500 mt-0.5">
+						${isStandings
+							? `${teamsCount} times • tabela consolidada`
+							: `${teamsCount} times • ${playedCount}/${matchesCount} jogos disputados`}
+					</p>
+				</div>
+				<svg class="cc-chevron text-slate-400" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+			</button>
+			<div class="cc-disclosure-body">
+				<div class="cc-disclosure-inner">
+					<div class="px-5 md:px-6 pb-6 pt-1 border-t border-blue-50 space-y-5">
+						${phaseBodyHtml(phase, sport)}
+					</div>
+				</div>
+			</div>
+		`;
+	}
+
+	function phaseBodyHtml(phase: Phase, sport: Sport): string {
+		if (phase.type === 'standings') {
+			// Tabela global do campeonato corrido — agrega TODAS as partidas.
+			const allMatches = tournament!.phases.flatMap(p => p.type === 'round' ? p.matches : []);
+			return standingsTable(tournament!.config.teams, allMatches, sport, 0, false);
+		}
+
+		const parts: string[] = [];
+
+		// Grupo: mostra classificação do próprio grupo + jogos.
+		if (phase.type === 'group') {
+			parts.push(`<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Classificação</h4>`);
+			parts.push(standingsTable(phase.teams, phase.matches, sport, 2, false)); // top 2 destacados
+		}
+
+		// Lista de jogos (para group, round e knockout).
+		parts.push(`<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 ${phase.type === 'group' ? 'mt-5' : ''} mb-2">Jogos</h4>`);
+		parts.push(matchesList(phase, sport));
+
+		return parts.join('');
+	}
+
+	/**
+	 * Renderização no modo "Visão Geral": card sempre aberto, com tabela de
+	 * classificação à esquerda (em mais colunas — GP, GC, %) e lista de jogos à
+	 * direita. No mobile as duas áreas empilham.
+	 */
+	function phaseCardOverviewHtml(phase: Phase): string {
+		const sport = tournament!.config.sport;
+		const statusText = phase.status === 'completed' ? 'Concluída'
+			: phase.status === 'in-progress' ? 'Em andamento'
+			: 'Pendente';
+		const statusClass = phase.status === 'completed' ? 'cc-badge-done'
+			: phase.status === 'in-progress' ? 'cc-badge-progress'
+			: 'cc-badge-pending';
+		const phaseIcon = iconForPhase(phase.type);
+
+		// Cabeçalho do card (sem botão de toggle — tudo aberto).
+		const header = `
+			<div class="px-5 md:px-6 py-5 flex items-center gap-4 border-b border-blue-50">
+				<div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white grid place-items-center shadow-md shadow-blue-500/30 shrink-0">
+					${phaseIcon}
+				</div>
+				<div class="flex-1 min-w-0">
+					<div class="flex items-center gap-2 flex-wrap">
+						<h3 class="font-bold text-slate-900 text-lg md:text-xl uppercase tracking-wide">${escapeHtml(phase.name)}</h3>
+						<span class="cc-badge ${statusClass}"><span class="cc-dot"></span>${statusText}</span>
+						<span class="cc-badge cc-badge-pending" title="Para editar resultados, volte ao Modo Compacto">
+							<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+							Somente leitura
+						</span>
+					</div>
+				</div>
+			</div>
+		`;
+
+		let body = '';
+
+		if (phase.type === 'standings') {
+			const allMatches = tournament!.phases.flatMap(p => p.type === 'round' ? p.matches : []);
+			body = `<div class="p-5 md:p-6">${standingsTable(tournament!.config.teams, allMatches, sport, 0, true)}</div>`;
+		} else if (phase.type === 'group') {
+			body = `
+				<div class="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-5 p-5 md:p-6">
+					<div>
+						<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Classificação</h4>
+						${standingsTable(phase.teams, phase.matches, sport, 2, true)}
+					</div>
+					<div>
+						${groupRoundsCarousel(phase, sport)}
+					</div>
+				</div>
+			`;
+		} else {
+			// rodada ou mata-mata: sem tabela, jogos ocupam a largura total.
+			body = `<div class="p-5 md:p-6">
+				<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Jogos</h4>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+					${phase.matches.length > 0
+						? phase.matches.map(m => matchRow(m, sport, true)).join('')
+						: '<p class="text-sm text-slate-500 italic">Aguardando definição dos confrontos.</p>'}
+				</div>
+			</div>`;
+		}
+
+		return header + body;
+	}
+
+	function standingsTable(teams: string[], matches: Match[], sport: Sport, qualifiedTop: number, extended: boolean): string {
+		const rows = calculateStandings(teams, matches, sport);
+		const showDraws = sport === 'futebol'; // só futebol tem empate
+		const dLabel = diffLabel(sport);
+		const dTitle = diffTitle(sport);
+		const maxPts = sport === 'basquete' ? 2 : 3;    // ponto máximo possível por jogo
+		const proLabel = sport === 'volei' ? 'SP' : (sport === 'basquete' ? 'PP' : 'GP');
+		const conLabel = sport === 'volei' ? 'SC' : (sport === 'basquete' ? 'PC' : 'GC');
+
+		const header = `
+			<thead>
+				<tr>
+					<th>#</th>
+					<th>Time</th>
+					<th title="Pontos">P</th>
+					<th title="Jogos">J</th>
+					<th title="Vitórias">V</th>
+					${showDraws ? `<th title="Empates">E</th>` : ''}
+					<th title="Derrotas">D</th>
+					${extended ? `<th title="${proLabel === 'GP' ? 'Gols Pró' : proLabel === 'PP' ? 'Pontos Pró' : 'Sets Pró'}">${proLabel}</th>` : ''}
+					${extended ? `<th title="${conLabel === 'GC' ? 'Gols Contra' : conLabel === 'PC' ? 'Pontos Contra' : 'Sets Contra'}">${conLabel}</th>` : ''}
+					<th title="${dTitle}">${dLabel}</th>
+					${extended ? `<th title="Aproveitamento">%</th>` : ''}
+				</tr>
+			</thead>
+		`;
+
+		const body = rows.map((r, i) => {
+			const isQual = qualifiedTop > 0 && i < qualifiedTop;
+			const cls = [isQual ? 'cc-qualified' : '', i === 0 ? 'cc-leader' : ''].filter(Boolean).join(' ');
+			const pct = r.played === 0 ? '—' : `${Math.round((r.points / (r.played * maxPts)) * 100)}%`;
+			return `
+				<tr class="${cls}">
+					<td>${i + 1}</td>
+					<td>${escapeHtml(r.team)}</td>
+					<td><strong>${r.points}</strong></td>
+					<td>${r.played}</td>
+					<td>${r.wins}</td>
+					${showDraws ? `<td>${r.draws}</td>` : ''}
+					<td>${r.losses}</td>
+					${extended ? `<td>${r.goalsFor}</td>` : ''}
+					${extended ? `<td>${r.goalsAgainst}</td>` : ''}
+					<td>${r.diff > 0 ? '+' + r.diff : r.diff}</td>
+					${extended ? `<td class="text-slate-500">${pct}</td>` : ''}
+				</tr>
+			`;
+		}).join('');
+
+		return `
+			<div class="overflow-x-auto cc-scroll rounded-xl border border-blue-50">
+				<table class="cc-table">${header}<tbody>${body}</tbody></table>
+			</div>
+			${qualifiedTop > 0 ? `<p class="text-[11px] text-blue-700 mt-2">● Linhas destacadas = classificados para a próxima fase.</p>` : ''}
+		`;
+	}
+
+	function matchesList(phase: Phase, sport: Sport, readonly = false): string {
+		if (phase.matches.length === 0) {
+			return `<p class="text-sm text-slate-500 italic">Aguardando definição dos confrontos.</p>`;
+		}
+		return `
+			<ul class="space-y-2">
+				${phase.matches.map(m => matchRow(m, sport, readonly)).join('')}
+			</ul>
+		`;
+	}
+
+	function matchRow(m: Match, sport: Sport, readonly = false): string {
+		const winner = matchWinner(m, sport);
+		const homeBold = winner === 'home' ? 'text-blue-700 font-bold' : 'text-slate-800';
+		const awayBold = winner === 'away' ? 'text-blue-700 font-bold' : 'text-slate-800';
+		const homeIsPlaceholder = /^Vencedor/.test(m.home);
+		const awayIsPlaceholder = /^Vencedor/.test(m.away);
+		const canEdit = !homeIsPlaceholder && !awayIsPlaceholder;
+
+		let center: string;
+		if (!canEdit) {
+			center = `<span class="text-xs text-slate-400 italic">aguardando rodada anterior</span>`;
+		} else if (readonly) {
+			center = scoreDisplay(m, sport);
+		} else {
+			center = scoreInputs(m, sport);
+		}
+
+		// Cabeçalho com data: formatado (readonly) ou input de agendamento (editável).
+		let header = '';
+		if (readonly) {
+			if (m.dateTime) {
+				const d = formatMatchDate(m.dateTime);
+				if (d) {
+					header = `<div class="text-[11px] text-center text-slate-500 mb-1.5 font-medium">${d}</div>`;
+				}
+			}
+		} else if (canEdit) {
+			header = `
+				<div class="flex items-center gap-2 mb-2 text-xs justify-center">
+					<label class="inline-flex items-center gap-1 text-slate-500">
+						<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+						<input type="datetime-local" data-field="dateTime"
+							value="${escapeAttr(m.dateTime ?? '')}"
+							class="bg-transparent border-0 text-slate-700 focus:outline-none focus:text-blue-700 cursor-pointer" />
+					</label>
+				</div>
+			`;
+		}
+
+		return `
+			<li class="rounded-xl border border-blue-50 bg-white/70 ${readonly ? '' : 'hover:bg-white'} transition px-3 py-3 md:px-4 md:py-3.5"
+					data-match-id="${m.id}">
+				${header}
+				<div class="flex items-center gap-3">
+					<div class="flex-1 min-w-0 text-right ${homeBold} truncate" title="${escapeHtml(m.home)}">${escapeHtml(m.home)}</div>
+					<div class="shrink-0 flex items-center gap-2">${center}</div>
+					<div class="flex-1 min-w-0 ${awayBold} truncate" title="${escapeHtml(m.away)}">${escapeHtml(m.away)}</div>
+				</div>
+				${sport === 'basquete' && canEdit && !readonly ? basketballWoRow(m) : ''}
+				${sport === 'basquete' && readonly && m.wo ? `<div class="text-[11px] text-center text-amber-700 mt-1 font-medium">W.O. do ${m.wo === 'home' ? 'mandante' : 'visitante'}</div>` : ''}
+			</li>
+		`;
+	}
+
+	/** Formata "YYYY-MM-DDTHH:MM" → "11/06 · Qui · 16:00". */
+	function formatMatchDate(iso: string): string {
+		const d = new Date(iso);
+		if (isNaN(d.getTime())) return '';
+		const day   = String(d.getDate()).padStart(2, '0');
+		const month = String(d.getMonth() + 1).padStart(2, '0');
+		const wd    = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d.getDay()];
+		const hh    = String(d.getHours()).padStart(2, '0');
+		const mm    = String(d.getMinutes()).padStart(2, '0');
+		return `${day}/${month} · ${wd} · ${hh}:${mm}`;
+	}
+
+	function escapeAttr(s: string): string {
+		return escapeHtml(s);
+	}
+
+	/**
+	 * Carrossel de jogos do grupo: mostra 2 jogos por página com setas ‹ › para
+	 * navegar. O rótulo acima indica a qual rodada os jogos pertencem (ou a faixa
+	 * de rodadas, quando a página contém partidas de rodadas diferentes).
+	 */
+	function groupRoundsCarousel(phase: Phase, sport: Sport): string {
+		const PAGE_SIZE = 2;
+		if (phase.matches.length === 0) {
+			return `<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Jogos</h4>
+				<p class="text-sm text-slate-500 italic">Sem jogos nesta fase.</p>`;
+		}
+
+		const totalPages = Math.ceil(phase.matches.length / PAGE_SIZE);
+
+		// Clampa o índice da página atual.
+		let idx = currentRoundByPhase.get(phase.id) ?? 0;
+		if (idx >= totalPages) idx = totalPages - 1;
+		if (idx < 0) idx = 0;
+		currentRoundByPhase.set(phase.id, idx);
+
+		const start = idx * PAGE_SIZE;
+		const pageMatches = phase.matches.slice(start, start + PAGE_SIZE);
+		const canPrev = idx > 0;
+		const canNext = idx < totalPages - 1;
+
+		// Rótulo — usa a rodada das partidas desta página.
+		const roundsInPage = [...new Set(pageMatches.map(m => m.round ?? 1))].sort((a, b) => a - b);
+		const label = roundsInPage.length === 1
+			? `${ordinal(roundsInPage[0])} Rodada`
+			: `${ordinal(roundsInPage[0])}–${ordinal(roundsInPage[roundsInPage.length - 1])} Rodada`;
+
+		return `
+			<div class="rounded-xl border border-blue-50 overflow-hidden bg-white/60">
+				<div class="flex items-center justify-between px-3 py-2 bg-blue-50/70 border-b border-blue-100"
+						data-round-nav="${phase.id}">
+					<button type="button" class="cc-round-prev w-8 h-8 rounded-lg grid place-items-center transition ${canPrev ? 'text-blue-700 hover:bg-blue-100' : 'text-slate-300 cursor-not-allowed'}"
+							${canPrev ? '' : 'disabled'} aria-label="Jogos anteriores">
+						<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+					</button>
+					<div class="text-sm font-bold text-slate-800 uppercase tracking-wider">
+						${label}
+						<span class="text-[11px] text-slate-500 font-medium ml-1">${idx + 1} / ${totalPages}</span>
+					</div>
+					<button type="button" class="cc-round-next w-8 h-8 rounded-lg grid place-items-center transition ${canNext ? 'text-blue-700 hover:bg-blue-100' : 'text-slate-300 cursor-not-allowed'}"
+							${canNext ? '' : 'disabled'} aria-label="Próximos jogos">
+						<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+					</button>
+				</div>
+				<ul class="divide-y divide-blue-50">
+					${pageMatches.map(m => matchRow(m, sport, true)).join('')}
+				</ul>
+			</div>
+		`;
+	}
+
+	function ordinal(n: number): string {
+		return `${n}ª`;
+	}
+
+	/** Exibição somente-leitura do placar (usada no modo Visão Geral). */
+	function scoreDisplay(m: Match, sport: Sport): string {
+		const dash = '<span class="text-slate-300 font-bold">–</span>';
+		if (sport === 'volei') {
+			const h = m.homeSets, a = m.awaySets;
+			const left  = h === null ? dash : `<span class="font-bold text-slate-800">${h}</span>`;
+			const right = a === null ? dash : `<span class="font-bold text-slate-800">${a}</span>`;
+			return `<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50/60">${left}<span class="text-slate-400 text-xs">x</span>${right}</div>`;
+		}
+		if (sport === 'basquete' && m.wo) {
+			return `<div class="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 font-bold text-xs">W.O.</div>`;
+		}
+		const h = m.homeScore, a = m.awayScore;
+		const left  = h === null ? dash : `<span class="font-bold text-slate-800">${h}</span>`;
+		const right = a === null ? dash : `<span class="font-bold text-slate-800">${a}</span>`;
+		return `<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50/60">${left}<span class="text-slate-400 text-xs">x</span>${right}</div>`;
+	}
+
+	function scoreInputs(m: Match, sport: Sport): string {
+		if (sport === 'volei') {
+			return `
+				<input data-field="homeSets" type="number" min="0" max="3" class="cc-input cc-score" value="${m.homeSets ?? ''}" placeholder="–" aria-label="Sets mandante" />
+				<span class="text-slate-400 font-semibold">x</span>
+				<input data-field="awaySets" type="number" min="0" max="3" class="cc-input cc-score" value="${m.awaySets ?? ''}" placeholder="–" aria-label="Sets visitante" />
+			`;
+		}
+		const placeholder = sport === 'basquete' ? '0' : '–';
+		return `
+			<input data-field="homeScore" type="number" min="0" max="999" class="cc-input cc-score" value="${m.homeScore ?? ''}" placeholder="${placeholder}" aria-label="Placar mandante" />
+			<span class="text-slate-400 font-semibold">x</span>
+			<input data-field="awayScore" type="number" min="0" max="999" class="cc-input cc-score" value="${m.awayScore ?? ''}" placeholder="${placeholder}" aria-label="Placar visitante" />
+		`;
+	}
+
+	function basketballWoRow(m: Match): string {
+		return `
+			<div class="flex items-center justify-center gap-3 mt-2 text-xs">
+				<span class="text-slate-500">W.O.:</span>
+				<label class="inline-flex items-center gap-1 cursor-pointer">
+					<input type="radio" name="wo-${m.id}" data-wo="none" ${!m.wo ? 'checked' : ''}> <span>Nenhum</span>
+				</label>
+				<label class="inline-flex items-center gap-1 cursor-pointer">
+					<input type="radio" name="wo-${m.id}" data-wo="home" ${m.wo === 'home' ? 'checked' : ''}> <span>Mandante</span>
+				</label>
+				<label class="inline-flex items-center gap-1 cursor-pointer">
+					<input type="radio" name="wo-${m.id}" data-wo="away" ${m.wo === 'away' ? 'checked' : ''}> <span>Visitante</span>
+				</label>
+			</div>
+		`;
+	}
+
+	// ---------- Listeners ----------
+
+	function attachCardListeners(): void {
+		// Toggle de expansão.
+		phasesEl.querySelectorAll<HTMLButtonElement>('.cc-card-toggle').forEach(btn => {
+			btn.addEventListener('click', () => {
+				const card = btn.closest<HTMLElement>('[data-phase-id]');
+				if (!card) return;
+				const id = card.dataset.phaseId!;
+				if (card.dataset.expanded === 'true') {
+					expanded.delete(id);
+					card.dataset.expanded = 'false';
+				} else {
+					expanded.add(id);
+					card.dataset.expanded = 'true';
+				}
+			});
+		});
+
+		// Inputs de placar (change = confirma ao sair do campo).
+		phasesEl.querySelectorAll<HTMLInputElement>('input[data-field]').forEach(input => {
+			input.addEventListener('change', () => handleScoreChange(input));
+		});
+
+		// Rádios de W.O. (basquete).
+		phasesEl.querySelectorAll<HTMLInputElement>('input[data-wo]').forEach(input => {
+			input.addEventListener('change', () => handleWoChange(input));
+		});
+
+		// Navegação entre rodadas dentro de um grupo (modo Visão Geral).
+		phasesEl.querySelectorAll<HTMLElement>('[data-round-nav]').forEach(nav => {
+			const phaseId = nav.dataset.roundNav!;
+			nav.querySelector<HTMLButtonElement>('.cc-round-prev')?.addEventListener('click', () => {
+				const cur = currentRoundByPhase.get(phaseId) ?? 0;
+				currentRoundByPhase.set(phaseId, Math.max(0, cur - 1));
+				render();
+			});
+			nav.querySelector<HTMLButtonElement>('.cc-round-next')?.addEventListener('click', () => {
+				const cur = currentRoundByPhase.get(phaseId) ?? 0;
+				currentRoundByPhase.set(phaseId, cur + 1);
+				render();
+			});
+		});
+	}
+
+	function findMatch(id: string): Match | null {
+		for (const p of tournament!.phases) {
+			const m = p.matches.find(x => x.id === id);
+			if (m) return m;
+		}
+		return null;
+	}
+
+	function handleScoreChange(input: HTMLInputElement): void {
+		if (!tournament) return;
+		const row = input.closest<HTMLElement>('[data-match-id]');
+		if (!row) return;
+		const id = row.dataset.matchId!;
+		const m = findMatch(id);
+		if (!m) return;
+
+		const field = input.dataset.field as string;
+
+		// Campo de agendamento — não afeta o status "jogado".
+		if (field === 'dateTime') {
+			m.dateTime = input.value || null;
+			saveTournament(tournament);
+			return;
+		}
+
+		// Campos de placar.
+		const raw = input.value.trim();
+		const num = raw === '' ? null : Math.max(0, Math.floor(Number(raw)));
+
+		// Validações leves para vôlei: máx 3 sets, um dos lados precisa ser 3.
+		if (tournament.config.sport === 'volei' && num !== null && num > 3) {
+			input.value = '3';
+			(m as any)[field] = 3;
+		} else {
+			(m as any)[field] = num;
+		}
+
+		recomputePlayed(m, tournament.config.sport);
+		render();
+	}
+
+	function handleWoChange(input: HTMLInputElement): void {
+		if (!tournament) return;
+		const row = input.closest<HTMLElement>('[data-match-id]');
+		if (!row) return;
+		const id = row.dataset.matchId!;
+		const m = findMatch(id);
+		if (!m) return;
+
+		const wo = input.dataset.wo as 'none' | 'home' | 'away';
+		m.wo = wo === 'none' ? null : wo;
+		recomputePlayed(m, tournament.config.sport);
+		render();
+	}
+
+	/** Marca a partida como "jogada" conforme regras de cada esporte. */
+	function recomputePlayed(m: Match, sport: Sport): void {
+		if (sport === 'volei') {
+			const h = m.homeSets, a = m.awaySets;
+			m.played = h !== null && a !== null && (h === 3 || a === 3) && h !== a;
+			return;
+		}
+		if (sport === 'basquete') {
+			if (m.wo) { m.played = true; return; }
+			m.played = m.homeScore !== null && m.awayScore !== null && m.homeScore !== m.awayScore;
+			return;
+		}
+		// futebol
+		m.played = m.homeScore !== null && m.awayScore !== null;
+	}
+
+	// ---------- Utilitários ----------
+
+	function uniqueTeamsInMatches(matches: Match[]): string[] {
+		const set = new Set<string>();
+		for (const m of matches) { set.add(m.home); set.add(m.away); }
+		return [...set];
+	}
+
+	function iconForPhase(type: string): string {
+		if (type === 'standings') {
+			return `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="13" width="3" height="5"/><rect x="12" y="9" width="3" height="9"/><rect x="17" y="5" width="3" height="13"/></svg>`;
+		}
+		if (type === 'knockout') {
+			return `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v4a4 4 0 0 0 4 4h4a4 4 0 0 1 4 4v4"/><circle cx="6" cy="3" r="1.5"/><circle cx="6" cy="21" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg>`;
+		}
+		if (type === 'group') {
+			return `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="3"/><path d="M22 21v-1.5a3.5 3.5 0 0 0-3-3.46"/></svg>`;
+		}
+		// round
+		return `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
+	}
+
+	function escapeHtml(s: string): string {
+		return s
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
+</script>

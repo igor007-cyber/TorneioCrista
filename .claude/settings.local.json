@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yarn astro *)",
+      "Bash(yarn dev *)",
+      "Bash(curl -s -o /dev/null -w \"/ -> %{http_code}\\\\n\" http://localhost:4321/)",
+      "Bash(curl -s -o /dev/null -w \"/tournament -> %{http_code}\\\\n\" http://localhost:4321/tournament)",
+      "Bash(curl -s http://localhost:4321/)",
+      "Bash(kill %1)",
+      "Bash(taskkill //F //IM node.exe)",
+      "PowerShell(yarn astro build 2>&1)"
+    ]
+  }
+}

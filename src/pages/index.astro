@@ -1,0 +1,198 @@
+---
+// Página inicial — lista todos os torneios criados como cards.
+// O usuário pode abrir um torneio existente ou criar um novo.
+import MainLayout from '../layouts/main.astro';
+---
+
+<MainLayout title="CopaCrista — Meus Torneios">
+	<main class="max-w-6xl mx-auto px-5 py-10 md:py-14">
+		<!-- Cabeçalho -->
+		<header class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10 cc-animate-in">
+			<div>
+				<div class="inline-flex items-center gap-3 mb-3">
+					<div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 grid place-items-center shadow-lg shadow-blue-500/30">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+							<path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+							<path d="M4 22h16"/>
+							<path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+							<path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+							<path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+						</svg>
+					</div>
+					<h1 class="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+						CopaCrista
+					</h1>
+				</div>
+				<p class="text-slate-600">Meus torneios · configure quantos quiser, todos salvos no seu navegador.</p>
+			</div>
+			<a href="/new" class="cc-btn cc-btn-primary text-base">
+				<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+				Novo Torneio
+			</a>
+		</header>
+
+		<!-- Lista de torneios (populada via JS) -->
+		<section id="tournaments-grid" class="cc-grid-auto"></section>
+
+		<!-- Estado vazio -->
+		<section id="empty-state" class="hidden cc-card rounded-3xl p-10 md:p-16 text-center cc-animate-in">
+			<div class="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 grid place-items-center text-white mb-5 shadow-lg shadow-blue-500/30">
+				<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+					<path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+					<path d="M4 22h16"/>
+					<path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+					<path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+					<path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+				</svg>
+			</div>
+			<h2 class="text-xl font-bold text-slate-900 mb-2">Nenhum torneio ainda</h2>
+			<p class="text-slate-600 mb-6">Crie seu primeiro campeonato — leva menos de um minuto.</p>
+			<a href="/new" class="cc-btn cc-btn-primary inline-flex">Criar meu primeiro torneio</a>
+		</section>
+
+		<footer class="text-center text-xs text-slate-500 mt-10">
+			Os dados ficam salvos apenas no seu navegador. Limpar os dados do site apaga os torneios.
+		</footer>
+	</main>
+</MainLayout>
+
+<script>
+	import { listTournaments, deleteTournament } from '../lib/storage';
+	import { SPORT_LABEL, FORMAT_LABEL, GENDER_LABEL } from '../lib/tournament';
+	import type { Tournament } from '../lib/types';
+
+	const grid     = document.getElementById('tournaments-grid')! as HTMLElement;
+	const emptyEl  = document.getElementById('empty-state')!      as HTMLElement;
+
+	function escapeHtml(s: string): string {
+		return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+	}
+
+	function sportIcon(sport: string): string {
+		if (sport === 'futebol')  return '⚽';
+		if (sport === 'basquete') return '🏀';
+		return '🏐';
+	}
+
+	function countMatches(t: Tournament): { total: number; played: number } {
+		let total = 0, played = 0;
+		for (const p of t.phases) {
+			for (const m of p.matches) {
+				total++;
+				if (m.played) played++;
+			}
+		}
+		return { total, played };
+	}
+
+	function renderCards(): void {
+		const tournaments = listTournaments();
+
+		if (tournaments.length === 0) {
+			grid.classList.add('hidden');
+			emptyEl.classList.remove('hidden');
+			return;
+		}
+
+		grid.classList.remove('hidden');
+		emptyEl.classList.add('hidden');
+
+		grid.innerHTML = tournaments.map((t, idx) => {
+			const { total, played } = countMatches(t);
+			const pct = total === 0 ? 0 : Math.round((played / total) * 100);
+			const isDone = t.champion !== null;
+			const statusBadge = isDone
+				? `<span class="cc-badge cc-badge-done"><span class="cc-dot"></span>Concluído</span>`
+				: played === 0
+					? `<span class="cc-badge cc-badge-pending"><span class="cc-dot"></span>Não iniciado</span>`
+					: `<span class="cc-badge cc-badge-progress"><span class="cc-dot"></span>Em andamento</span>`;
+
+			const created = new Date(t.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+			return `
+				<article class="cc-card rounded-2xl overflow-hidden cc-animate-in" style="animation-delay:${idx * 40}ms">
+					<a href="/tournament?id=${encodeURIComponent(t.id)}" class="block p-5 md:p-6">
+						<div class="flex items-start gap-3 mb-4">
+							<div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 grid place-items-center text-2xl shrink-0 shadow-md shadow-blue-500/30">
+								${sportIcon(t.config.sport)}
+							</div>
+							<div class="flex-1 min-w-0">
+								<h3 class="font-bold text-slate-900 text-base md:text-lg leading-tight truncate">
+									${escapeHtml(t.name)}
+								</h3>
+								<p class="text-xs text-slate-500 mt-0.5">
+									${escapeHtml(GENDER_LABEL[t.config.gender])} · ${escapeHtml(FORMAT_LABEL[t.config.format])}
+								</p>
+							</div>
+							${statusBadge}
+						</div>
+
+						${isDone ? `
+							<div class="cc-champion rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-sm">
+								<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+								</svg>
+								<span class="font-bold truncate">${escapeHtml(t.champion!)}</span>
+							</div>
+						` : ''}
+
+						<dl class="grid grid-cols-3 gap-2 text-center mb-4">
+							<div class="rounded-lg bg-blue-50/60 py-2">
+								<dt class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Times</dt>
+								<dd class="font-bold text-slate-900 text-lg">${t.config.teams.length}</dd>
+							</div>
+							<div class="rounded-lg bg-blue-50/60 py-2">
+								<dt class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Jogos</dt>
+								<dd class="font-bold text-slate-900 text-lg">${played}<span class="text-slate-400 text-xs font-medium">/${total}</span></dd>
+							</div>
+							<div class="rounded-lg bg-blue-50/60 py-2">
+								<dt class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Progresso</dt>
+								<dd class="font-bold text-slate-900 text-lg">${pct}%</dd>
+							</div>
+						</dl>
+
+						<!-- Barra de progresso -->
+						<div class="w-full h-1.5 rounded-full bg-blue-50 overflow-hidden">
+							<div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all"
+									 style="width:${pct}%"></div>
+						</div>
+
+						<div class="flex items-center justify-between mt-4 text-xs text-slate-500">
+							<span>Criado em ${created}</span>
+							<span class="inline-flex items-center gap-1 text-blue-700 font-semibold">
+								Abrir
+								<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+							</span>
+						</div>
+					</a>
+
+					<div class="border-t border-blue-50 px-5 py-2 flex justify-end">
+						<button type="button" class="cc-delete text-xs text-rose-600 hover:text-rose-800 font-medium inline-flex items-center gap-1"
+								data-id="${encodeURIComponent(t.id)}" data-name="${escapeHtml(t.name)}">
+							<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+							Excluir torneio
+						</button>
+					</div>
+				</article>
+			`;
+		}).join('');
+
+		// Delete handlers.
+		grid.querySelectorAll<HTMLButtonElement>('.cc-delete').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				const id   = decodeURIComponent(btn.dataset.id!);
+				const name = btn.dataset.name ?? 'este torneio';
+				if (confirm(`Excluir "${name}"? Essa ação não pode ser desfeita.`)) {
+					deleteTournament(id);
+					renderCards();
+				}
+			});
+		});
+	}
+
+	renderCards();
+</script>

@@ -1,0 +1,243 @@
+@import "tailwindcss";
+
+/* ===== Tokens e base visual ===== */
+:root {
+	color-scheme: light;
+	--cc-bg: #f7faff;
+	--cc-ring: 0 0 0 3px rgb(59 130 246 / 0.35);
+}
+
+html, body {
+	background:
+		radial-gradient(1200px 600px at 90% -10%, rgb(191 219 254 / 0.55), transparent 60%),
+		radial-gradient(900px 500px at -10% 110%, rgb(199 210 254 / 0.5), transparent 60%),
+		linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+	min-height: 100dvh;
+}
+
+body {
+	font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+	color: rgb(15 23 42);
+	-webkit-font-smoothing: antialiased;
+}
+
+/* ===== Animações utilitárias ===== */
+@keyframes cc-fade-up {
+	from { opacity: 0; transform: translateY(8px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes cc-pop {
+	0%   { transform: scale(0.96); opacity: 0; }
+	60%  { transform: scale(1.02); opacity: 1; }
+	100% { transform: scale(1);    opacity: 1; }
+}
+@keyframes cc-shine {
+	0%   { background-position: -200% 0; }
+	100% { background-position: 200% 0; }
+}
+
+.cc-animate-in { animation: cc-fade-up 0.45s ease both; }
+.cc-pop-in     { animation: cc-pop 0.35s ease both; }
+
+/* ===== Cards e disclosure ===== */
+.cc-card {
+	background: rgba(255, 255, 255, 0.85);
+	backdrop-filter: blur(10px);
+	border: 1px solid rgb(219 234 254);
+	box-shadow:
+		0 1px 2px rgb(30 58 138 / 0.04),
+		0 10px 30px -10px rgb(59 130 246 / 0.15);
+	transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.cc-card:hover {
+	transform: translateY(-2px);
+	border-color: rgb(147 197 253);
+	box-shadow:
+		0 1px 2px rgb(30 58 138 / 0.05),
+		0 20px 40px -15px rgb(59 130 246 / 0.25);
+}
+
+.cc-disclosure-body {
+	display: grid;
+	grid-template-rows: 0fr;
+	transition: grid-template-rows 0.35s ease;
+}
+.cc-disclosure-body > .cc-disclosure-inner {
+	overflow: hidden;
+	min-height: 0;
+}
+[data-expanded="true"] > .cc-disclosure-body {
+	grid-template-rows: 1fr;
+}
+[data-expanded="true"] .cc-chevron {
+	transform: rotate(180deg);
+}
+.cc-chevron { transition: transform 0.25s ease; }
+
+/* ===== Botões ===== */
+.cc-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	font-weight: 600;
+	border-radius: 0.75rem;
+	padding: 0.7rem 1.2rem;
+	transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+	cursor: pointer;
+	user-select: none;
+}
+.cc-btn:active { transform: scale(0.98); }
+.cc-btn:focus-visible { outline: none; box-shadow: var(--cc-ring); }
+
+.cc-btn-primary {
+	color: white;
+	background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+	box-shadow: 0 8px 20px -6px rgb(37 99 235 / 0.5);
+}
+.cc-btn-primary:hover {
+	background: linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%);
+	box-shadow: 0 12px 24px -6px rgb(37 99 235 / 0.55);
+}
+.cc-btn-ghost {
+	background: white;
+	color: rgb(29 78 216);
+	border: 1px solid rgb(191 219 254);
+}
+.cc-btn-ghost:hover {
+	background: rgb(239 246 255);
+	border-color: rgb(147 197 253);
+}
+.cc-btn-danger {
+	background: white;
+	color: rgb(185 28 28);
+	border: 1px solid rgb(254 202 202);
+}
+.cc-btn-danger:hover { background: rgb(254 242 242); }
+
+/* ===== Pill group (radio fake) ===== */
+.cc-pill {
+	display: inline-flex;
+	padding: 0.4rem;
+	border-radius: 0.9rem;
+	background: rgb(239 246 255);
+	border: 1px solid rgb(219 234 254);
+	gap: 0.25rem;
+	flex-wrap: wrap;
+}
+.cc-pill > label {
+	cursor: pointer;
+	padding: 0.55rem 1rem;
+	border-radius: 0.65rem;
+	font-weight: 600;
+	color: rgb(71 85 105);
+	font-size: 0.9rem;
+	transition: all 0.2s ease;
+	display: inline-flex; align-items: center; gap: 0.4rem;
+}
+.cc-pill > input[type="radio"] { display: none; }
+.cc-pill > input[type="radio"]:checked + label {
+	background: white;
+	color: rgb(29 78 216);
+	box-shadow: 0 4px 10px -4px rgb(59 130 246 / 0.35);
+}
+
+/* ===== Inputs ===== */
+.cc-input {
+	width: 100%;
+	border: 1px solid rgb(219 234 254);
+	background: white;
+	border-radius: 0.7rem;
+	padding: 0.65rem 0.85rem;
+	font-size: 0.95rem;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.cc-input:focus {
+	outline: none;
+	border-color: rgb(96 165 250);
+	box-shadow: 0 0 0 3px rgb(59 130 246 / 0.2);
+}
+.cc-score {
+	width: 3.5rem;
+	text-align: center;
+	font-weight: 700;
+	font-size: 1rem;
+}
+
+/* ===== Badge de status ===== */
+.cc-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.25rem 0.65rem;
+	border-radius: 999px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+}
+.cc-badge-pending  { background: rgb(241 245 249); color: rgb(71 85 105); }
+.cc-badge-progress { background: rgb(219 234 254); color: rgb(29 78 216); }
+.cc-badge-done     { background: rgb(220 252 231); color: rgb(21 128 61); }
+.cc-dot {
+	width: 0.5rem; height: 0.5rem; border-radius: 999px; background: currentColor;
+}
+
+/* ===== Tabelas de classificação ===== */
+.cc-table {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	font-size: 0.9rem;
+}
+.cc-table thead th {
+	background: rgb(239 246 255);
+	color: rgb(30 64 175);
+	font-weight: 600;
+	font-size: 0.75rem;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	padding: 0.6rem 0.5rem;
+	text-align: center;
+	position: sticky; top: 0;
+}
+.cc-table thead th:first-child { text-align: left; border-top-left-radius: 0.6rem; }
+.cc-table thead th:last-child  { border-top-right-radius: 0.6rem; }
+.cc-table tbody td {
+	padding: 0.65rem 0.5rem;
+	border-top: 1px solid rgb(241 245 249);
+	text-align: center;
+}
+.cc-table tbody td:first-child {
+	text-align: left;
+	font-weight: 600;
+	color: rgb(15 23 42);
+}
+.cc-table tbody tr:hover td { background: rgb(248 250 252); }
+.cc-table .cc-qualified td { background: rgb(239 246 255); }
+.cc-table .cc-qualified td:first-child { color: rgb(29 78 216); }
+.cc-table .cc-leader   td:first-child::before {
+	content: "★";
+	color: rgb(217 119 6);
+	margin-right: 0.35rem;
+}
+
+/* ===== Campeão ===== */
+.cc-champion {
+	background: linear-gradient(135deg, #fde68a 0%, #fbbf24 50%, #f59e0b 100%);
+	background-size: 200% 100%;
+	animation: cc-shine 4s linear infinite;
+	color: rgb(68 32 5);
+	border: 1px solid rgb(251 191 36);
+}
+
+/* ===== Scrollbar sutil ===== */
+.cc-scroll { scrollbar-width: thin; scrollbar-color: rgb(191 219 254) transparent; }
+.cc-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+.cc-scroll::-webkit-scrollbar-thumb { background: rgb(191 219 254); border-radius: 999px; }
+
+/* ===== Utilidades ===== */
+.cc-grid-auto {
+	display: grid;
+	gap: 1.25rem;
+	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
