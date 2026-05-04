@@ -1,0 +1,311 @@
+---
+import MainLayout from '../layouts/main.astro';
+import logo from '../assets/logo.png';
+import './css/home.css';
+import banner from '../assets/banner.png'
+
+const navItems = [
+	{ label: 'Home', href: '/' },
+	{ label: 'Instagram', href: 'https://www.instagram.com/copacristafortaleza/' },
+	{ label: 'PIB Fortaleza', href: 'https://pibfortaleza.org.br/' },
+	{ label: 'Jogos', href: '/vizualizarTorneio' },
+	{ label: 'Login', href: '/login' },
+];
+
+const featureCards = [
+	{
+		number: '01',
+		title: 'Login da Organização',
+		text: 'Entrada rápida para a equipe responsável criar torneios, definir confrontos e lançar resultados.',
+		highlight: 'Acesso seguro ao painel',
+	},
+	{
+		number: '02',
+		title: 'Andamento dos Jogos',
+		text: 'Visualização por fase, grupos, mata-mata e status de cada partida conforme a competição avança.',
+		highlight: 'Leitura clara do campeonato',
+	},
+	{
+		number: '03',
+		title: 'Base Oficial do Evento',
+		text: 'Home conectada ao Instagram @copacristafortaleza e ao site institucional da PIB Fortaleza.',
+		highlight: 'Comunicação centralizada',
+	},
+];
+
+const gallery = [
+	{
+		src: 'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/Pib-706.jpg?bwg=1752183282',
+		title: 'Abertura e celebração',
+		meta: 'Copa Cristã Fortaleza',
+	},
+	{
+		src: 'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/088-I-Copa-Crista_05jul25_manha_8670.png?bwg=1752182755',
+		title: 'Primeira fase em quadra',
+		meta: 'Registros oficiais da PIB',
+	},
+	{
+		src: 'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/076-I-Copa-Crista_05jul25_manha_8635.png?bwg=1752182755',
+		title: 'Clima de disputa e união',
+		meta: 'Esporte, comunhão e energia',
+	},
+];
+
+const matches = [
+	{
+		stage: 'Grupo A',
+		teamA: 'Equipe Azul',
+		teamB: 'Equipe Esperança',
+		date: 'Painel atualiza cronograma e placares',
+		status: 'Andamento em tempo real',
+	},
+	{
+		stage: 'Semifinais',
+		teamA: 'Vencedor Grupo A',
+		teamB: 'Vencedor Grupo B',
+		date: 'A chave evolui conforme os resultados',
+		status: 'Classificação automática',
+	},
+	{
+		stage: 'Final',
+		teamA: 'Melhor campanha',
+		teamB: 'Desafio decisivo',
+		date: 'Fechamento da competição',
+		status: 'Destaque para campeões',
+	},
+];
+
+const socialImages = [
+	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/Pib-121.jpg?bwg=1752182548',
+	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/Pib-203.jpg?bwg=1752182549',
+	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/Pib-439.jpg?bwg=1752182552',
+	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/Pib-706.jpg?bwg=1752183282',
+];
+---
+
+<MainLayout title="Copa Cristã Fortaleza">
+	<main class="plx-page">
+		<header class="plx-header">
+			<div class="plx-logo">
+				<img src={logo.src} alt="Logo Copa Cristã Fortaleza" class="plx-logo-image" />
+				<div>
+					<p>Copa Cristã</p>
+					<strong>Fortaleza</strong>
+				</div>
+			</div>
+
+			<nav class="plx-nav" aria-label="Principal">
+				{navItems.map((item, index) => (
+					<a
+						href={item.href}
+						target={item.href.startsWith('http') ? '_blank' : undefined}
+						rel={item.href.startsWith('http') ? 'noreferrer' : undefined}
+						class={index === 0 ? 'active' : ''}
+					>
+						{item.label}
+					</a>
+				))}
+			</nav>
+
+			<a href="/login" class="plx-menu-button">Entrar</a>
+		</header>
+
+		<section class="plx-hero">
+			<div class="plx-side-social">
+				<a href="https://www.instagram.com/copacristafortaleza/" target="_blank" rel="noreferrer">IG</a>
+				<a href="https://pibfortaleza.org.br/" target="_blank" rel="noreferrer">PIB</a>
+				<a href="/login">GO</a>
+			</div>
+
+			<div class="plx-hero-media">
+				<img
+					src="https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/088-I-Copa-Crista_05jul25_manha_8670.png?bwg=1752182755"
+					alt="Atletas da Copa Cristã em ação"
+				/>
+				<div class="plx-hero-overlay"></div>
+			</div>
+
+			<div class="plx-hero-content">
+				<div class="plx-hero-box">
+					<p class="plx-eyebrow">PIB Fortaleza apresenta</p>
+					<h1>Venha participar da 2° Copa Cristã.</h1>
+					<p class="plx-hero-text">
+						Esta página principal foi redesenhada no estilo do tema Plaxer para destacar a identidade da
+						Copa Cristã Fortaleza. O evento é realizado pela
+						<a href="https://pibfortaleza.org.br/" target="_blank" rel="noreferrer"> PIB Fortaleza</a>,
+						com cobertura no
+						<a href="https://www.instagram.com/copacristafortaleza/" target="_blank" rel="noreferrer">
+							@copacristafortaleza
+						</a>
+						e acesso direto ao painel que mostra o andamento de cada jogo.
+					</p>
+					<div class="plx-hero-actions">
+						<a href="/login" class="plx-btn-primary">Entrar no sistema</a>
+						<a href="/vizualizarTorneio" class="plx-btn-secondary">Veja os jogos</a>
+					</div>
+				</div>
+			</div>
+
+			
+		</section>
+
+		<section class="plx-features">
+			{featureCards.map((card, index) => (
+				<article class={`plx-feature-card ${index === 2 ? 'accent' : ''}`}>
+					<div class="plx-feature-icon">{card.number}</div>
+					<h2>{card.title}</h2>
+					<p>{card.text}</p>
+					<strong>{card.highlight}</strong>
+				</article>
+			))}
+		</section>
+
+		<section class="plx-story">
+			<div class="plx-story-copy">
+				<p class="plx-section-kicker">Sobre a Copa</p>
+				<h2>Uma experiência criada para unir esporte, organização e comunhão cristã.</h2>
+				<p>
+					A Copa Cristã reúne competição saudável, integração entre participantes e uma comunicação visual
+					mais forte para valorizar cada fase do evento. A estrutura do sistema permite criar torneios,
+					acompanhar grupos e registrar resultados sem depender de controles externos.
+				</p>
+				<p>
+					Com base pública confirmada no portal da PIB Fortaleza, a I Copa Cristã teve primeira fase em
+					<span> 04 e 05 de julho de 2025</span> e fase final publicada em
+					<span> 13 de julho de 2025</span>. Esta home prepara o espaço para a edição deste ano sem inventar
+					datas ainda não confirmadas.
+				</p>
+				<a href="https://pibfortaleza.org.br/" target="_blank" rel="noreferrer" class="plx-inline-link">
+					Conhecer a PIB Fortaleza
+				</a>
+			</div>
+
+			<div class="plx-story-media">
+				<img
+					src="https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/076-I-Copa-Crista_05jul25_manha_8635.png?bwg=1752182755"
+					alt="Partida da Copa Cristã"
+				/>
+				<div class="plx-play-badge">PIB</div>
+			</div>
+		</section>
+
+		<section class="plx-gallery-block">
+			<div class="plx-block-header">
+				<div>
+					<p class="plx-section-kicker">Galeria</p>
+					<h2>Destaques visuais da Copa Cristã</h2>
+				</div>
+				<a href="https://www.instagram.com/copacristafortaleza/" target="_blank" rel="noreferrer">Ver perfil oficial</a>
+			</div>
+
+			<div class="plx-gallery-grid">
+				{gallery.map((item) => (
+					<article class="plx-gallery-card">
+						<img src={item.src} alt={item.title} loading="lazy" />
+						<div class="plx-gallery-copy">
+							<span>{item.meta}</span>
+							<h3>{item.title}</h3>
+						</div>
+					</article>
+				))}
+			</div>
+		</section>
+
+		<section class="plx-matches">
+			<div class="plx-block-header">
+				<div>
+					<p class="plx-section-kicker">Latest matches</p>
+					<h2>Fluxo pensado para acompanhar cada jogo</h2>
+				</div>
+				<div class="plx-match-filter">
+					<span class="active">All</span>
+					<span>Grupos</span>
+					<span>Mata-mata</span>
+					<span>Final</span>
+				</div>
+			</div>
+
+			<div class="plx-match-list">
+				{matches.map((match, index) => (
+					<article class={`plx-match-row ${index === 1 ? 'is-highlighted' : ''}`}>
+						<div class="plx-match-teams">
+							<div class="plx-team-box">
+								<small>{match.stage}</small>
+								<strong>{match.teamA}</strong>
+							</div>
+							<span>VS</span>
+							<div class="plx-team-box">
+								<small>{match.status}</small>
+								<strong>{match.teamB}</strong>
+							</div>
+						</div>
+						<div class="plx-match-meta">
+							<h3>Painel da Copa Cristã</h3>
+							<p>{match.date}</p>
+						</div>
+						<div class="plx-match-stream">
+							<a href="/login">acessar edição</a>
+							<a href="/vizualizarTorneio">ver andamento</a>
+						</div>
+					</article>
+				))}
+			</div>
+		</section>
+
+		<section class="plx-banner">
+			<img
+				src={banner.src}
+				alt="Ambiente da Copa Cristã"
+			/>			
+		</section>
+
+		<section class="plx-social-wall">
+			<div class="plx-social-title">
+				<h2>Compartilhe com #CopaCristãFortaleza</h2>
+				<p>Siga e acompanhe novidades pelo Instagram oficial.</p>
+			</div>
+			<div class="plx-social-grid">
+				{socialImages.map((image) => (
+					<img src={image} alt="Registro da Copa Cristã" loading="lazy" />
+				))}
+			</div>
+		</section>
+
+		<footer class="plx-footer">
+			<div class="plx-footer-brand">
+				<div class="plx-logo">
+					<img src={logo.src} alt="Logo Copa Cristã Fortaleza" class="plx-logo-image" />
+					<div>
+						<p>Copa Cristã</p>
+						<strong>Fortaleza</strong>
+					</div>
+				</div>
+				<p>
+					Página principal da Copa Cristã organizada pela Primeira Igreja Batista de Fortaleza, com acesso
+					ao sistema de gestão dos jogos e acompanhamento do campeonato.
+				</p>
+			</div>
+
+			<div>
+				<h3>Organização</h3>
+				<p>PIB Fortaleza</p>
+				<p>Rua Silva Paulet, 1111</p>
+				<p>Aldeota, Fortaleza/CE</p>
+			</div>
+
+			<div>
+				<h3>Contatos</h3>
+				<p>(85) 3433-1370</p>
+				<p>contato@pibfortaleza.org.br</p>
+				<p>@copacristafortaleza</p>
+			</div>
+
+			<div>
+				<h3>Acessos</h3>
+				<a href="/login">Login da organização</a>
+				<a href="/vizualizarTorneio">Jogos cadastrados</a>
+				<a href="https://pibfortaleza.org.br/" target="_blank" rel="noreferrer">Site da PIB</a>
+			</div>
+		</footer>
+	</main>
+</MainLayout>

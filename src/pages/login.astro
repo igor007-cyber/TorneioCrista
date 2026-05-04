@@ -1,0 +1,82 @@
+---
+import MainLayout from '../layouts/main.astro';
+import './css/login.css';
+---
+
+<MainLayout title="Copa Cristã — Login">
+	<main class="cc-login-page">
+		<section class="cc-login-card">
+			<div class="cc-login-copy">
+				<p class="cc-login-kicker">Acesso da organização</p>
+				<h1>Entrar no painel da Copa Cristã</h1>
+				<p>
+					Use este acesso para abrir o painel de torneios, cadastrar jogos, lançar placares e acompanhar
+					o andamento de cada fase da competição.
+				</p>
+
+				<div class="cc-login-links">
+					<a href="/">Voltar para a página principal</a>
+					<a href="https://www.instagram.com/copacristafortaleza/" target="_blank" rel="noreferrer">Instagram da Copa</a>
+				</div>
+			</div>
+
+			<form id="login-form" class="cc-login-form">
+				<label>
+					<span>Nome</span>
+					<input id="name" type="text" class="cc-login-input" placeholder="Seu nome" required />
+				</label>
+
+				<label>
+					<span>E-mail</span>
+					<input id="email" type="email" class="cc-login-input" placeholder="voce@copacrista.com" required />
+				</label>
+
+				<label>
+					<span>Função</span>
+					<input type="text" class="cc-login-input" value="Organização da Copa Cristã" disabled />
+				</label>
+
+				<p id="login-error" class="cc-login-error" hidden></p>
+
+				<button type="submit" class="cc-login-submit">Entrar no painel</button>
+			</form>
+		</section>
+	</main>
+</MainLayout>
+
+<script>
+	import { getSession, saveSession } from '../lib/auth';
+
+	const form = document.getElementById('login-form') as HTMLFormElement | null;
+	const errorEl = document.getElementById('login-error') as HTMLParagraphElement | null;
+	const nameInput = document.getElementById('name') as HTMLInputElement | null;
+	const emailInput = document.getElementById('email') as HTMLInputElement | null;
+	const params = new URLSearchParams(window.location.search);
+	const next = params.get('next') || '/painel';
+
+	if (getSession()) {
+		window.location.href = next;
+	}
+
+	form?.addEventListener('submit', (event) => {
+		event.preventDefault();
+		if (!nameInput || !emailInput || !errorEl) return;
+
+		const name = nameInput.value.trim();
+		const email = emailInput.value.trim();
+
+		if (!name || !email) {
+			errorEl.hidden = false;
+			errorEl.textContent = 'Preencha nome e e-mail para continuar.';
+			return;
+		}
+
+		saveSession({
+			name,
+			email,
+			loggedAt: Date.now(),
+		});
+
+		window.location.href = next;
+	});
+</script>
