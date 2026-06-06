@@ -1,6 +1,13 @@
 
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
+    overflow-x: hidden;
     background:
         radial-gradient(circle at top center, rgb(72 136 171 / 0.17), transparent 22%),
         linear-gradient(180deg, #050b12 0%, #060d15 26%, #09111a 100%);
@@ -639,6 +646,17 @@ a {
 }
 
 @media (max-width: 1200px) {
+    .plx-header,
+    .plx-features,
+    .plx-story,
+    .plx-gallery-block,
+    .plx-matches,
+    .plx-banner,
+    .plx-social-wall,
+    .plx-footer {
+        padding-inline: 32px;
+    }
+
     .plx-features,
     .plx-gallery-grid,
     .plx-footer {
@@ -648,6 +666,18 @@ a {
     .plx-story,
     .plx-match-row {
         grid-template-columns: 1fr;
+    }
+
+    .plx-story-media {
+        height: 360px;
+    }
+
+    .plx-social-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .plx-hero {
+        padding: 0 32px 48px 48px;
     }
 }
 
@@ -663,23 +693,39 @@ a {
         padding-inline: 20px;
     }
 
+    /* Cabeçalho: logo à esquerda, botão Entrar à direita, menu em linha própria abaixo */
     .plx-header {
-        flex-direction: column;
-        align-items: flex-start;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px 20px;
+        padding-block: 18px;
     }
 
     .plx-nav {
-        gap: 16px;
+        order: 3;
+        flex-basis: 100%;
         justify-content: flex-start;
+        gap: 14px 22px;
+        padding-top: 6px;
+        border-top: 1px solid rgb(72 136 171 / 0.12);
+    }
+
+    .plx-menu-button {
+        order: 2;
+        padding: 10px 16px;
     }
 
     .plx-logo-image {
-        width: 62px;
-        height: 62px;
+        width: 56px;
+        height: 56px;
+    }
+
+    .plx-logo strong {
+        font-size: 1.4rem;
     }
 
     .plx-hero {
-        padding: 24px 20px 46px;
+        padding: 28px 20px 46px;
         min-height: auto;
     }
 
@@ -689,9 +735,22 @@ a {
 
     .plx-features,
     .plx-gallery-grid,
-    .plx-footer,
-    .plx-social-grid {
+    .plx-footer {
         grid-template-columns: 1fr;
+    }
+
+    .plx-features {
+        margin-top: 0;
+    }
+
+    .plx-feature-card {
+        min-height: auto;
+    }
+
+    .plx-story {
+        padding-top: 64px;
+        padding-bottom: 64px;
+        gap: 32px;
     }
 
     .plx-block-header {
@@ -699,9 +758,18 @@ a {
         align-items: flex-start;
     }
 
-    .plx-hero-box,
-    .plx-match-teams {
-        padding-inline: 18px;
+    .plx-hero-box {
+        padding: 22px 20px 26px;
+    }
+
+    .plx-banner {
+        height: 380px;
+    }
+
+    .plx-banner-copy {
+        left: 20px;
+        right: 20px;
+        bottom: 32px;
     }
 }
 
@@ -712,15 +780,31 @@ a {
     .plx-matches h2,
     .plx-banner h2,
     .plx-social-title h2 {
-        font-size: 2.4rem;
+        font-size: 2.2rem;
+    }
+
+    .plx-hero-text,
+    .plx-story p,
+    .plx-feature-card p,
+    .plx-banner p,
+    .plx-footer p {
+        font-size: 1rem;
+        line-height: 1.7;
     }
 
     .plx-match-teams {
         grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 20px;
     }
 
     .plx-match-teams > span {
         text-align: center;
+    }
+
+    .plx-match-meta,
+    .plx-match-stream {
+        padding-inline: 20px;
     }
 
     .plx-hero-actions,
@@ -731,5 +815,56 @@ a {
     .plx-btn-primary,
     .plx-btn-secondary {
         width: 100%;
+    }
+
+    .plx-gallery-card {
+        height: 320px;
+    }
+
+    .plx-social-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .plx-social-grid img {
+        height: 280px;
+    }
+}
+
+@media (max-width: 420px) {
+    .plx-header,
+    .plx-features,
+    .plx-story,
+    .plx-gallery-block,
+    .plx-matches,
+    .plx-banner,
+    .plx-social-wall,
+    .plx-footer {
+        padding-inline: 14px;
+    }
+
+    .plx-nav {
+        gap: 10px 16px;
+    }
+
+    .plx-nav a {
+        font-size: 0.92rem;
+    }
+
+    .plx-logo {
+        gap: 12px;
+    }
+
+    .plx-logo-image {
+        width: 48px;
+        height: 48px;
+    }
+
+    .plx-hero h1,
+    .plx-story h2,
+    .plx-gallery-block h2,
+    .plx-matches h2,
+    .plx-banner h2,
+    .plx-social-title h2 {
+        font-size: 1.9rem;
     }
 }
