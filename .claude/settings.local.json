@@ -8,7 +8,10 @@
       "Bash(curl -s http://localhost:4321/)",
       "Bash(kill %1)",
       "Bash(taskkill //F //IM node.exe)",
-      "PowerShell(yarn astro build 2>&1)"
+      "PowerShell(yarn astro build 2>&1)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__list_tables",
+      "Bash(yarn add *)"
     ]
   }
 }

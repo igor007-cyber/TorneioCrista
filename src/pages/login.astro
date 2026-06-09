@@ -22,13 +22,13 @@ import './css/login.css';
 
 			<form id="login-form" class="cc-login-form">
 				<label>
-					<span>Nome</span>
-					<input id="name" type="text" class="cc-login-input" placeholder="Seu nome" required />
+					<span>E-mail</span>
+					<input id="email" type="email" class="cc-login-input" placeholder="voce@copacrista.com" required />
 				</label>
 
 				<label>
-					<span>E-mail</span>
-					<input id="email" type="email" class="cc-login-input" placeholder="voce@copacrista.com" required />
+					<span>Senha</span>
+					<input id="password" type="password" class="cc-login-input" placeholder="Senha de acesso" required />
 				</label>
 
 				<label>
@@ -46,11 +46,13 @@ import './css/login.css';
 
 <script>
 	import { getSession, saveSession } from '../lib/auth';
+	import { supabase } from '../lib/supabase';
 
 	const form = document.getElementById('login-form') as HTMLFormElement | null;
 	const errorEl = document.getElementById('login-error') as HTMLParagraphElement | null;
-	const nameInput = document.getElementById('name') as HTMLInputElement | null;
 	const emailInput = document.getElementById('email') as HTMLInputElement | null;
+	const passwordInput = document.getElementById('password') as HTMLInputElement | null;
+	const submitBtn = document.querySelector('.cc-login-submit') as HTMLButtonElement | null;
 	const params = new URLSearchParams(window.location.search);
 	const next = params.get('next') || '/painel';
 
@@ -58,22 +60,49 @@ import './css/login.css';
 		window.location.href = next;
 	}
 
-	form?.addEventListener('submit', (event) => {
+	function showError(message: string) {
+		if (!errorEl) return;
+		errorEl.hidden = false;
+		errorEl.textContent = message;
+	}
+
+	form?.addEventListener('submit', async (event) => {
 		event.preventDefault();
-		if (!nameInput || !emailInput || !errorEl) return;
+		if (!emailInput || !passwordInput || !errorEl) return;
 
-		const name = nameInput.value.trim();
 		const email = emailInput.value.trim();
+		const password = passwordInput.value;
 
-		if (!name || !email) {
-			errorEl.hidden = false;
-			errorEl.textContent = 'Preencha nome e e-mail para continuar.';
+		if (!email || !password) {
+			showError('Preencha e-mail e senha para continuar.');
+			return;
+		}
+
+		errorEl.hidden = true;
+		if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Entrando...'; }
+
+		const { data, error } = await supabase.rpc('verify_login', {
+			p_email: email,
+			p_password: password,
+		});
+
+		if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Entrar no painel'; }
+
+		if (error) {
+			showError('Erro ao conectar com o servidor. Tente novamente.');
+			return;
+		}
+
+		const user = Array.isArray(data) ? data[0] : null;
+		if (!user) {
+			showError('E-mail ou senha incorretos.');
+			passwordInput.value = '';
 			return;
 		}
 
 		saveSession({
-			name,
-			email,
+			name: user.email,
+			email: user.email,
 			loggedAt: Date.now(),
 		});
 
