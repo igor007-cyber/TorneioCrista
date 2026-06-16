@@ -4,7 +4,18 @@
 // Tudo roda no cliente; a página chama generateTournament() uma vez na
 // configuração e updateTournament() após cada edição de resultado.
 
-import type { Config, Match, Phase, Sport, Tournament } from './types';
+import type { Config, ManualStanding, Match, Phase, Sport, Tournament } from './types';
+
+/**
+ * Organização manual dos times, definida pelo usuário no cadastro. Quando ausente,
+ * a geração cai no comportamento automático (embaralhar / distribuir sozinho).
+ */
+export interface Arrangement {
+	/** Para 'grupos': cada grupo com seus times, na ordem/posição desejada. */
+	groups?: string[][];
+	/** Para 'corrido' e 'mata-mata': times em ordem de posição/chaveamento. */
+	order?: string[];
+}
 
 // ---------------------------------------------------------------------------
 // Utilidades
@@ -151,6 +162,40 @@ export function calculateStandings(teams: string[], matches: Match[], sport: Spo
 	});
 }
 
+/**
+ * Classificação com overrides manuais aplicados por cima do cálculo automático.
+ * Para cada time, os campos definidos em `manual` substituem os calculados; o
+ * restante permanece automático. Reordena considerando os valores efetivos.
+ */
+export function effectiveStandings(
+	teams: string[],
+	matches: Match[],
+	sport: Sport,
+	manual?: Record<string, ManualStanding>,
+): StandingRow[] {
+	const rows = calculateStandings(teams, matches, sport);
+	if (!manual) return rows;
+
+	for (const r of rows) {
+		const m = manual[r.team];
+		if (!m) continue;
+		if (m.points != null) r.points = m.points;
+		if (m.played != null) r.played = m.played;
+		if (m.wins   != null) r.wins   = m.wins;
+		if (m.draws  != null) r.draws  = m.draws;
+		if (m.losses != null) r.losses = m.losses;
+		if (m.diff   != null) r.diff   = m.diff;
+	}
+
+	return rows.sort((a, b) => {
+		if (b.points !== a.points) return b.points - a.points;
+		if (b.wins   !== a.wins)   return b.wins   - a.wins;
+		if (b.diff   !== a.diff)   return b.diff   - a.diff;
+		if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+		return a.team.localeCompare(b.team);
+	});
+}
+
 // ---------------------------------------------------------------------------
 // Geração — formato "Campeonato Corrido" (round-robin)
 // ---------------------------------------------------------------------------
@@ -184,15 +229,14 @@ function roundRobinRounds(teams: string[]): string[][][] {
 }
 
 function generateRoundRobin(teams: string[]): Phase[] {
-	const shuffled = shuffle(teams);
-	const rounds = roundRobinRounds(shuffled);
+	const rounds = roundRobinRounds(teams);
 
 	// Phase "standings" global no topo + uma phase por rodada.
 	const standingsPhase: Phase = {
 		id: uid('phase'),
 		name: 'Classificação Geral',
 		type: 'standings',
-		teams: shuffled,
+		teams,
 		matches: [],    // as partidas vivem nas phases de rodada
 		status: 'pending',
 	};
@@ -201,7 +245,7 @@ function generateRoundRobin(teams: string[]): Phase[] {
 		id: uid('phase'),
 		name: `Rodada ${i + 1}`,
 		type: 'round',
-		teams: shuffled,
+		teams,
 		matches: matches.map(([h, a]) => blankMatch(h, a)),
 		status: 'pending',
 	}));
@@ -213,22 +257,25 @@ function generateRoundRobin(teams: string[]): Phase[] {
 // Geração — formato "Fase de Grupos"
 // ---------------------------------------------------------------------------
 
-function chooseGroupCount(n: number): number {
+export function chooseGroupCount(n: number): number {
 	// Meta: grupos de ~4 times, tamanho mínimo 3.
 	// 3–5 → 1 grupo; 6–7 → 2; 8–9 → 2 (de 4) ou 3 (de 3); usaremos arredondamento.
 	if (n <= 5) return 1;
 	return Math.max(1, Math.round(n / 4));
 }
 
-function generateGroups(teams: string[]): Phase[] {
+/** Distribuição automática (fallback): embaralha e reparte em grupos (~4 por grupo). */
+function autoGroups(teams: string[]): string[][] {
 	const shuffled = shuffle(teams);
 	const groupCount = chooseGroupCount(shuffled.length);
-
-	// Distribui times pelos grupos em round-robin (serpente).
 	const bucket: string[][] = Array.from({ length: groupCount }, () => []);
 	shuffled.forEach((t, i) => bucket[i % groupCount].push(t));
+	return bucket;
+}
 
-	return bucket.map((gTeams, i) => {
+/** Monta as fases de grupo a partir de uma divisão já pronta (manual ou automática). */
+function generateGroups(groups: string[][]): Phase[] {
+	return groups.map((gTeams, i) => {
 		const rounds = roundRobinRounds(gTeams);
 		const matches: Match[] = [];
 		rounds.forEach((r, rIdx) => r.forEach(([h, a]) => {
@@ -332,11 +379,14 @@ function buildKnockoutBracket(teamsInOrder: string[]): Phase[] {
 // Fachada pública — geração inicial
 // ---------------------------------------------------------------------------
 
-export function generateTournament(config: Config): Tournament {
+export function generateTournament(config: Config, arrangement?: Arrangement): Tournament {
 	let phases: Phase[];
-	if (config.format === 'corrido')         phases = generateRoundRobin(config.teams);
-	else if (config.format === 'mata-mata')  phases = buildKnockoutBracket(shuffle(config.teams));
-	else                                      phases = generateGroups(config.teams);
+	if (config.format === 'corrido')
+		phases = generateRoundRobin(arrangement?.order ?? shuffle(config.teams));
+	else if (config.format === 'mata-mata')
+		phases = buildKnockoutBracket(arrangement?.order ?? shuffle(config.teams));
+	else
+		phases = generateGroups(arrangement?.groups ?? autoGroups(config.teams));
 
 	const name = `Campeonato ${GENDER_LABEL[config.gender]} de ${SPORT_LABEL[config.sport]}`;
 

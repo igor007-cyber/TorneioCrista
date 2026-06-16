@@ -1,0 +1,31 @@
+/* Inputs da classificação editável (P, J, V, E, D, SG na tela de edição). */
+.cc-stand-cell {
+	padding: 0.15rem 0.2rem;
+}
+
+.cc-stand-input {
+	width: 2.6rem;
+	text-align: center;
+	border: 1px solid rgb(191 219 254);
+	border-radius: 0.4rem;
+	background: #fff;
+	padding: 0.2rem 0.25rem;
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: rgb(30 41 59);
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+
+.cc-stand-input:focus {
+	outline: none;
+	border-color: rgb(59 130 246);
+	box-shadow: 0 0 0 2px rgb(59 130 246 / 0.15);
+}
+
+/* Esconde as setas do input number para caber melhor na tabela. */
+.cc-stand-input::-webkit-outer-spin-button,
+.cc-stand-input::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}

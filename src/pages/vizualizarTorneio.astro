@@ -48,10 +48,10 @@ import MainLayout from '../layouts/main.astro';
 </MainLayout>
 
 <script>
-	import { listTournaments, getTournament } from '../lib/storage';
+	import { listTournaments, getTournament, loadTournaments } from '../lib/storage';
 	import {
 		updateTournament,
-		calculateStandings,
+		effectiveStandings,
 		matchWinner,
 		SPORT_LABEL, FORMAT_LABEL, GENDER_LABEL,
 		diffLabel, diffTitle,
@@ -258,13 +258,13 @@ import MainLayout from '../layouts/main.astro';
 
 		if (phase.type === 'standings') {
 			const allMatches = tournament.phases.flatMap((item) => item.type === 'round' ? item.matches : []);
-			body = `<div class="p-5 md:p-6">${standingsTable(tournament.config.teams, allMatches, sport, 0, true)}</div>`;
+			body = `<div class="p-5 md:p-6">${standingsTable(tournament.config.teams, allMatches, sport, 0, true, phase)}</div>`;
 		} else if (phase.type === 'group') {
 			body = `
 				<div class="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-5 p-5 md:p-6">
 					<div>
 						<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Classificação</h4>
-						${standingsTable(phase.teams, phase.matches, sport, 2, true)}
+						${standingsTable(phase.teams, phase.matches, sport, 2, true, phase)}
 					</div>
 					<div>
 						${groupRoundsCarousel(phase, sport)}
@@ -292,8 +292,8 @@ import MainLayout from '../layouts/main.astro';
 		`;
 	}
 
-	function standingsTable(teams: string[], matches: Match[], sport: Sport, qualifiedTop: number, extended: boolean): string {
-		const rows = calculateStandings(teams, matches, sport);
+	function standingsTable(teams: string[], matches: Match[], sport: Sport, qualifiedTop: number, extended: boolean, phase?: Phase): string {
+		const rows = effectiveStandings(teams, matches, sport, phase?.manualStandings);
 		const showDraws = sport === 'futebol';
 		const dLabel = diffLabel(sport);
 		const dTitle = diffTitle(sport);
@@ -454,7 +454,10 @@ import MainLayout from '../layouts/main.astro';
 		return `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
 	}
 
+	// Render imediato com o cache local, depois sincroniza com o banco e re-renderiza
+	// com os torneios oficiais do Supabase (visíveis para qualquer visitante).
 	render();
+	loadTournaments().then(render);
 </script>
 
 <style>

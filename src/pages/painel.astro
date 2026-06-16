@@ -63,7 +63,7 @@ import MainLayout from '../layouts/main.astro';
 
 <script>
 	import { clearSession, getSession } from '../lib/auth';
-	import { listTournaments, deleteTournament } from '../lib/storage';
+	import { listTournaments, loadTournaments } from '../lib/storage';
 	import { SPORT_LABEL, FORMAT_LABEL, GENDER_LABEL } from '../lib/tournament';
 	import type { Tournament } from '../lib/types';
 
@@ -172,30 +172,9 @@ import MainLayout from '../layouts/main.astro';
 							</span>
 						</div>
 					</a>
-
-					<div class="border-t border-blue-50 px-5 py-2 flex justify-end">
-						<button type="button" class="cc-delete text-xs text-rose-600 hover:text-rose-800 font-medium inline-flex items-center gap-1"
-								data-id="${encodeURIComponent(t.id)}" data-name="${escapeHtml(t.name)}">
-							<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-							Excluir torneio
-						</button>
-					</div>
 				</article>
 			`;
 		}).join('');
-
-		grid.querySelectorAll<HTMLButtonElement>('.cc-delete').forEach(btn => {
-			btn.addEventListener('click', (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				const id   = decodeURIComponent(btn.dataset.id!);
-				const name = btn.dataset.name ?? 'este torneio';
-				if (confirm(`Excluir "${name}"? Essa ação não pode ser desfeita.`)) {
-					deleteTournament(id);
-					renderCards();
-				}
-			});
-		});
 	}
 
 	if (headerEl && session) {
@@ -213,5 +192,8 @@ import MainLayout from '../layouts/main.astro';
 		});
 	}
 
+	// Mostra o cache local na hora (resposta imediata) e, em seguida, sincroniza
+	// com o banco e re-renderiza com os dados oficiais do Supabase.
 	renderCards();
+	loadTournaments().then(renderCards);
 </script>

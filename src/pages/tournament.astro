@@ -29,15 +29,15 @@ import './css/tournament.css';
 </script>
 
 <script>
-	import { getTournament, saveTournament, deleteTournament } from '../lib/storage';
+	import { getTournament, loadTournament, saveTournament } from '../lib/storage';
 	import {
 		updateTournament,
-		calculateStandings,
+		effectiveStandings,
 		matchWinner,
 		SPORT_LABEL, FORMAT_LABEL, GENDER_LABEL,
 		diffLabel, diffTitle,
 	} from '../lib/tournament';
-	import type { Match, Phase, Sport, Tournament } from '../lib/types';
+	import type { ManualStanding, Match, Phase, Sport, Tournament } from '../lib/types';
 
 	// ---------- Estado e helpers ----------
 
@@ -58,15 +58,29 @@ import './css/tournament.css';
 	const phasesEl  = document.getElementById('phases')            as HTMLElement;
 	const emptyEl   = document.getElementById('empty-state')       as HTMLElement;
 
-	if (!tournament) {
-		phasesEl.classList.add('hidden');
-		headerEl.classList.add('hidden');
-		emptyEl.classList.remove('hidden');
-	} else {
+	function boot(): void {
+		if (!tournament) {
+			phasesEl.classList.add('hidden');
+			headerEl.classList.add('hidden');
+			emptyEl.classList.remove('hidden');
+			return;
+		}
+		phasesEl.classList.remove('hidden');
+		headerEl.classList.remove('hidden');
+		emptyEl.classList.add('hidden');
 		// Expande por padrão a primeira fase ativa (ou a primeira).
 		const firstActive = tournament.phases.find(p => p.status !== 'completed') ?? tournament.phases[0];
 		if (firstActive) expanded.add(firstActive.id);
 		render();
+	}
+
+	// Render imediato a partir do cache local, depois sincroniza com o banco
+	// (fonte da verdade) e re-renderiza com os dados oficiais do Supabase.
+	boot();
+	if (tournamentId) {
+		loadTournament(tournamentId).then(fresh => {
+			if (fresh) { tournament = fresh; boot(); }
+		});
 	}
 
 	// ---------- Renderização ----------
@@ -105,20 +119,9 @@ import './css/tournament.css';
 							? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Modo Compacto`
 							: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>Visão Geral`}
 					</button>
-					<button id="btn-reset" class="cc-btn cc-btn-danger" type="button">
-						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-						Excluir torneio
-					</button>
 				</div>
 			</div>
 		`;
-		document.getElementById('btn-reset')?.addEventListener('click', () => {
-			if (!tournament) return;
-			if (confirm(`Excluir "${tournament.name}"? Essa ação não pode ser desfeita.`)) {
-				deleteTournament(tournament.id);
-				window.location.href = '/painel';
-			}
-		});
 		document.getElementById('btn-view')?.addEventListener('click', () => {
 			viewMode = viewMode === 'overview' ? 'compact' : 'overview';
 			localStorage.setItem(VIEW_KEY, viewMode);
@@ -219,7 +222,7 @@ import './css/tournament.css';
 		if (phase.type === 'standings') {
 			// Tabela global do campeonato corrido — agrega TODAS as partidas.
 			const allMatches = tournament!.phases.flatMap(p => p.type === 'round' ? p.matches : []);
-			return standingsTable(tournament!.config.teams, allMatches, sport, 0, false);
+			return standingsTable(tournament!.config.teams, allMatches, sport, 0, false, phase, true);
 		}
 
 		const parts: string[] = [];
@@ -227,7 +230,7 @@ import './css/tournament.css';
 		// Grupo: mostra classificação do próprio grupo + jogos.
 		if (phase.type === 'group') {
 			parts.push(`<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Classificação</h4>`);
-			parts.push(standingsTable(phase.teams, phase.matches, sport, 2, false)); // top 2 destacados
+			parts.push(standingsTable(phase.teams, phase.matches, sport, 2, false, phase, true)); // top 2 destacados
 		}
 
 		// Lista de jogos (para group, round e knockout).
@@ -275,13 +278,13 @@ import './css/tournament.css';
 
 		if (phase.type === 'standings') {
 			const allMatches = tournament!.phases.flatMap(p => p.type === 'round' ? p.matches : []);
-			body = `<div class="p-5 md:p-6">${standingsTable(tournament!.config.teams, allMatches, sport, 0, true)}</div>`;
+			body = `<div class="p-5 md:p-6">${standingsTable(tournament!.config.teams, allMatches, sport, 0, true, phase, false)}</div>`;
 		} else if (phase.type === 'group') {
 			body = `
 				<div class="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-5 p-5 md:p-6">
 					<div>
 						<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Classificação</h4>
-						${standingsTable(phase.teams, phase.matches, sport, 2, true)}
+						${standingsTable(phase.teams, phase.matches, sport, 2, true, phase, false)}
 					</div>
 					<div>
 						${groupRoundsCarousel(phase, sport)}
@@ -303,8 +306,9 @@ import './css/tournament.css';
 		return header + body;
 	}
 
-	function standingsTable(teams: string[], matches: Match[], sport: Sport, qualifiedTop: number, extended: boolean): string {
-		const rows = calculateStandings(teams, matches, sport);
+	function standingsTable(teams: string[], matches: Match[], sport: Sport, qualifiedTop: number, extended: boolean, phase?: Phase, editable = false): string {
+		const rows = effectiveStandings(teams, matches, sport, phase?.manualStandings);
+		const canEdit = editable && !!phase;
 		const showDraws = sport === 'futebol'; // só futebol tem empate
 		const dLabel = diffLabel(sport);
 		const dTitle = diffTitle(sport);
@@ -330,6 +334,14 @@ import './css/tournament.css';
 			</thead>
 		`;
 
+		// Célula numérica: input editável (quando canEdit) ou texto.
+		const ecell = (team: string, field: string, inputValue: number, displayHtml: string): string => {
+			if (!canEdit) return `<td>${displayHtml}</td>`;
+			return `<td class="cc-stand-cell"><input type="number" inputmode="numeric"
+				class="cc-stand-input" data-standing-phase="${phase!.id}" data-team="${escapeAttr(team)}" data-field="${field}"
+				value="${inputValue}" aria-label="${field}" /></td>`;
+		};
+
 		const body = rows.map((r, i) => {
 			const isQual = qualifiedTop > 0 && i < qualifiedTop;
 			const cls = [isQual ? 'cc-qualified' : '', i === 0 ? 'cc-leader' : ''].filter(Boolean).join(' ');
@@ -338,14 +350,14 @@ import './css/tournament.css';
 				<tr class="${cls}">
 					<td>${i + 1}</td>
 					<td>${escapeHtml(r.team)}</td>
-					<td><strong>${r.points}</strong></td>
-					<td>${r.played}</td>
-					<td>${r.wins}</td>
-					${showDraws ? `<td>${r.draws}</td>` : ''}
-					<td>${r.losses}</td>
+					${ecell(r.team, 'points', r.points, `<strong>${r.points}</strong>`)}
+					${ecell(r.team, 'played', r.played, `${r.played}`)}
+					${ecell(r.team, 'wins', r.wins, `${r.wins}`)}
+					${showDraws ? ecell(r.team, 'draws', r.draws, `${r.draws}`) : ''}
+					${ecell(r.team, 'losses', r.losses, `${r.losses}`)}
 					${extended ? `<td>${r.goalsFor}</td>` : ''}
 					${extended ? `<td>${r.goalsAgainst}</td>` : ''}
-					<td>${r.diff > 0 ? '+' + r.diff : r.diff}</td>
+					${ecell(r.team, 'diff', r.diff, `${r.diff > 0 ? '+' + r.diff : r.diff}`)}
 					${extended ? `<td class="text-slate-500">${pct}</td>` : ''}
 				</tr>
 			`;
@@ -570,8 +582,13 @@ import './css/tournament.css';
 		});
 
 		// Inputs de placar (change = confirma ao sair do campo).
-		phasesEl.querySelectorAll<HTMLInputElement>('input[data-field]').forEach(input => {
+		phasesEl.querySelectorAll<HTMLInputElement>('input[data-field]:not([data-standing-phase])').forEach(input => {
 			input.addEventListener('change', () => handleScoreChange(input));
+		});
+
+		// Inputs da classificação editável (P, J, V, E, D, SG).
+		phasesEl.querySelectorAll<HTMLInputElement>('input[data-standing-phase]').forEach(input => {
+			input.addEventListener('change', () => handleStandingChange(input));
 		});
 
 		// Rádios de W.O. (basquete).
@@ -647,6 +664,41 @@ import './css/tournament.css';
 		const wo = input.dataset.wo as 'none' | 'home' | 'away';
 		m.wo = wo === 'none' ? null : wo;
 		recomputePlayed(m, tournament.config.sport);
+		render();
+	}
+
+	/**
+	 * Edição manual da classificação. Cada campo digitado vira um override sobre o
+	 * valor automático; apagar o campo volta ao automático.
+	 */
+	function handleStandingChange(input: HTMLInputElement): void {
+		if (!tournament) return;
+		const phaseId = input.dataset.standingPhase!;
+		const team    = input.dataset.team!;
+		const field   = input.dataset.field as keyof ManualStanding;
+		const phase   = tournament.phases.find(p => p.id === phaseId);
+		if (!phase) return;
+
+		const raw = input.value.trim();
+		if (raw === '') {
+			// Sem valor → remove o override desse campo (volta ao automático).
+			const m = phase.manualStandings?.[team];
+			if (m) {
+				delete m[field];
+				if (Object.keys(m).length === 0) delete phase.manualStandings![team];
+				if (phase.manualStandings && Object.keys(phase.manualStandings).length === 0) {
+					delete phase.manualStandings;
+				}
+			}
+		} else {
+			let num = Math.floor(Number(raw));
+			if (!Number.isFinite(num)) return;
+			if (field !== 'diff') num = Math.max(0, num);   // só o saldo pode ser negativo
+			if (!phase.manualStandings) phase.manualStandings = {};
+			if (!phase.manualStandings[team]) phase.manualStandings[team] = {};
+			phase.manualStandings[team][field] = num;
+		}
+
 		render();
 	}
 

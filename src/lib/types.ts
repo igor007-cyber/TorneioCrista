@@ -38,6 +38,20 @@ export interface Match {
 
 export type PhaseType = 'group' | 'round' | 'knockout' | 'standings';
 
+/**
+ * Override manual da classificação de um time. Cada campo é opcional: quando
+ * preenchido, substitui o valor calculado automaticamente; quando ausente,
+ * mantém o automático. Permite ao organizador ajustar a tabela à mão.
+ */
+export interface ManualStanding {
+	points?: number;
+	played?: number;
+	wins?:   number;
+	draws?:  number;
+	losses?: number;
+	diff?:   number;   // saldo (SG/SP/SS)
+}
+
 export interface Phase {
 	id:      string;
 	name:    string;              // "Grupo A", "Rodada 3", "Semifinal", "Classificação Geral"
@@ -45,6 +59,8 @@ export interface Phase {
 	teams:   string[];            // times envolvidos (vazio para knockout de rounds futuros)
 	matches: Match[];
 	status:  'pending' | 'in-progress' | 'completed';
+	// Overrides manuais da classificação, por nome do time. Opcional.
+	manualStandings?: Record<string, ManualStanding>;
 }
 
 export interface Tournament {

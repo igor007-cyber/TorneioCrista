@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yarn build *)",
+      "Bash(curl -s -w '\\\\nHTTP_STATUS:%{http_code}\\\\n' '__TRACKED_VAR__/rest/v1/tournaments?select=id,name,sport,format,champion,created_at&order=created_at.desc' -H 'apikey: __TRACKED_VAR__' -H 'Authorization: Bearer __TRACKED_VAR__')",
+      "Bash(node -e ' *)",
+      "Bash(curl -s \"http://localhost:4399/src/pages/painel.astro?astro&type=script&index=1&lang.ts\")",
+      "Bash(curl -s \"http://localhost:4399/src/lib/storage.ts\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 4399 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { try { Stop-Process -Id $_ -Force -ErrorAction Stop; \"Encerrado PID $_\" } catch {} })"
+    ]
+  }
+}
