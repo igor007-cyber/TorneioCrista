@@ -88,20 +88,20 @@ export function matchPoints(m: Match, side: 'home' | 'away', sport: Sport): numb
 	}
 
 	if (sport === 'basquete') {
-		// W.O. do próprio lado = 0; adversário faltou = 2 (vitória); normal: 2/1.
+		// W.O. do próprio lado = 0; adversário faltou = 1 (vitória); normal: 1/0.
 		if (m.wo === side) return 0;
-		if (m.wo && m.wo !== side) return 2;
-		return winner === side ? 2 : 1;
+		if (m.wo && m.wo !== side) return 1;
+		return winner === side ? 1 : 0;
 	}
 
-	// vôlei: pontuação baseada no placar de sets
+	// vôlei: melhor de 3 sets (vence quem faz 2). Pontuação por placar de sets:
 	const isHome = side === 'home';
 	const own = isHome ? (m.homeSets ?? 0) : (m.awaySets ?? 0);
 	const opp = isHome ? (m.awaySets ?? 0) : (m.homeSets ?? 0);
-	if (own === 3 && opp <= 1) return 3;    // 3x0 / 3x1
-	if (own === 3 && opp === 2) return 2;   // 3x2
-	if (own === 2 && opp === 3) return 1;   // 2x3
-	return 0;                                // 0x3 / 1x3
+	if (own === 2 && opp === 0) return 3;   // vitória 2x0
+	if (own === 2 && opp === 1) return 2;   // vitória 2x1
+	if (own === 1 && opp === 2) return 1;   // derrota 1x2
+	return 0;                                // derrota 0x2
 }
 
 // ---------------------------------------------------------------------------
@@ -536,7 +536,7 @@ export function updateTournament(t: Tournament): Tournament {
 // Helpers de exibição
 // ---------------------------------------------------------------------------
 
-export const SPORT_LABEL: Record<Sport, string>  = { futebol: 'Futebol', basquete: 'Basquete', volei: 'Vôlei' };
+export const SPORT_LABEL: Record<Sport, string>  = { futebol: 'Futsal', basquete: 'Basquete', volei: 'Vôlei' };
 export const FORMAT_LABEL: Record<Format, string> = { grupos: 'Fase de Grupos', corrido: 'Campeonato Corrido', 'mata-mata': 'Mata-Mata' };
 export const GENDER_LABEL: Record<Gender, string> = { masculino: 'Masculino', feminino: 'Feminino' };
 

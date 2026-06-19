@@ -312,7 +312,7 @@ import './css/tournament.css';
 		const showDraws = sport === 'futebol'; // só futebol tem empate
 		const dLabel = diffLabel(sport);
 		const dTitle = diffTitle(sport);
-		const maxPts = sport === 'basquete' ? 2 : 3;    // ponto máximo possível por jogo
+		const maxPts = sport === 'basquete' ? 1 : 3;    // ponto máximo possível por jogo
 		const proLabel = sport === 'volei' ? 'SP' : (sport === 'basquete' ? 'PP' : 'GP');
 		const conLabel = sport === 'volei' ? 'SC' : (sport === 'basquete' ? 'PC' : 'GC');
 
@@ -532,9 +532,9 @@ import './css/tournament.css';
 	function scoreInputs(m: Match, sport: Sport): string {
 		if (sport === 'volei') {
 			return `
-				<input data-field="homeSets" type="number" min="0" max="3" class="cc-input cc-score" value="${m.homeSets ?? ''}" placeholder="–" aria-label="Sets mandante" />
+				<input data-field="homeSets" type="number" min="0" max="2" class="cc-input cc-score" value="${m.homeSets ?? ''}" placeholder="–" aria-label="Sets mandante" />
 				<span class="text-slate-400 font-semibold">x</span>
-				<input data-field="awaySets" type="number" min="0" max="3" class="cc-input cc-score" value="${m.awaySets ?? ''}" placeholder="–" aria-label="Sets visitante" />
+				<input data-field="awaySets" type="number" min="0" max="2" class="cc-input cc-score" value="${m.awaySets ?? ''}" placeholder="–" aria-label="Sets visitante" />
 			`;
 		}
 		const placeholder = sport === 'basquete' ? '0' : '–';
@@ -641,10 +641,10 @@ import './css/tournament.css';
 		const raw = input.value.trim();
 		const num = raw === '' ? null : Math.max(0, Math.floor(Number(raw)));
 
-		// Validações leves para vôlei: máx 3 sets, um dos lados precisa ser 3.
-		if (tournament.config.sport === 'volei' && num !== null && num > 3) {
-			input.value = '3';
-			(m as any)[field] = 3;
+		// Validações leves para vôlei: melhor de 3 (máx 2 sets, vencedor precisa fazer 2).
+		if (tournament.config.sport === 'volei' && num !== null && num > 2) {
+			input.value = '2';
+			(m as any)[field] = 2;
 		} else {
 			(m as any)[field] = num;
 		}
@@ -706,7 +706,7 @@ import './css/tournament.css';
 	function recomputePlayed(m: Match, sport: Sport): void {
 		if (sport === 'volei') {
 			const h = m.homeSets, a = m.awaySets;
-			m.played = h !== null && a !== null && (h === 3 || a === 3) && h !== a;
+			m.played = h !== null && a !== null && (h === 2 || a === 2) && h !== a;
 			return;
 		}
 		if (sport === 'basquete') {
