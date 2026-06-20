@@ -29,7 +29,7 @@ import MainLayout from '../layouts/main.astro';
 		</section>
 
 		<section id="public-content" class="hidden mt-8 space-y-8">
-			<section class="cc-public-selector cc-card rounded-3xl p-5 md:p-6 cc-animate-in">
+			<section id="public-selector" class="cc-public-selector cc-card rounded-3xl p-5 md:p-6 cc-animate-in">
 				<div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-5">
 					<div>
 						<h2 class="text-xl md:text-2xl font-bold text-slate-900">Torneios cadastrados</h2>
@@ -66,6 +66,7 @@ import MainLayout from '../layouts/main.astro';
 	const contentEl = document.getElementById('public-content') as HTMLElement;
 	const listEl = document.getElementById('public-list') as HTMLElement;
 	const detailEl = document.getElementById('public-detail') as HTMLElement;
+	const selectorEl = document.getElementById('public-selector') as HTMLElement;
 	const selectorSummaryEl = document.getElementById('selector-summary') as HTMLElement;
 
 	function escapeHtml(value: string): string {
@@ -113,13 +114,40 @@ import MainLayout from '../layouts/main.astro';
 		emptyEl.classList.add('hidden');
 		contentEl.classList.remove('hidden');
 
-		if (!selectedId || !getTournament(selectedId)) {
-			selectedId = tournaments[0].id;
-		}
-
 		selectorSummaryEl.textContent = `${tournaments.length} torneio(s) disponível(is) para visualização.`;
 		renderSelector(tournaments);
-		renderTournament(selectedId!);
+
+		// Duas telas: a lista de cards e o detalhe (jogos) de um torneio. Mostra o
+		// detalhe somente quando há um torneio válido selecionado (clique ou link com ?id=).
+		if (selectedId && getTournament(selectedId)) {
+			showDetail(selectedId);
+		} else {
+			showList();
+		}
+	}
+
+	/** Tela 1: lista de cards. Esconde o detalhe. */
+	function showList(): void {
+		selectorEl.classList.remove('hidden');
+		detailEl.classList.add('hidden');
+		window.scrollTo({ top: 0, behavior: 'smooth' });
+	}
+
+	/** Tela 2: jogos do torneio. Esconde os cards. */
+	function showDetail(id: string): void {
+		renderTournament(id);
+		selectorEl.classList.add('hidden');
+		detailEl.classList.remove('hidden');
+		window.scrollTo({ top: 0, behavior: 'smooth' });
+	}
+
+	/** Volta para a escolha de torneios (limpa a seleção e o ?id= da URL). */
+	function backToList(): void {
+		selectedId = null;
+		const url = new URL(window.location.href);
+		url.searchParams.delete('id');
+		window.history.replaceState({}, '', url);
+		render();
 	}
 
 	function renderSelector(tournaments: Tournament[]): void {
@@ -186,7 +214,8 @@ import MainLayout from '../layouts/main.astro';
 				const url = new URL(window.location.href);
 				url.searchParams.set('id', selectedId!);
 				window.history.replaceState({}, '', url);
-				render();
+				// Troca para a tela de jogos do torneio escolhido (os cards somem).
+				showDetail(selectedId!);
 			});
 		});
 	}
@@ -199,6 +228,10 @@ import MainLayout from '../layouts/main.astro';
 		const { sport, gender, format, teams } = current.config;
 
 		detailEl.innerHTML = `
+			<button type="button" id="cc-back-to-list" class="cc-btn cc-btn-ghost mb-5 cc-animate-in">
+				← Voltar para os torneios
+			</button>
+
 			<header class="cc-public-tournament-header cc-animate-in">
 				<div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
 					<div>
@@ -225,6 +258,7 @@ import MainLayout from '../layouts/main.astro';
 		`;
 
 		attachRoundListeners();
+		detailEl.querySelector<HTMLButtonElement>('#cc-back-to-list')?.addEventListener('click', backToList);
 	}
 
 	function phaseCardOverviewHtml(phase: Phase, sport: Sport, tournament: Tournament, index: number): string {
