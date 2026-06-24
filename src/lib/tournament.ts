@@ -1,15 +1,5 @@
-// Lógica do torneio: geração dos confrontos, cálculo de pontos e classificação,
-// propagação de vencedores no mata-mata e determinação do campeão.
-//
-// Tudo roda no cliente; a página chama generateTournament() uma vez na
-// configuração e updateTournament() após cada edição de resultado.
-
 import type { Config, Format, Gender, ManualStanding, Match, Phase, Sport, Tournament } from './types';
 
-/**
- * Organização manual dos times, definida pelo usuário no cadastro. Quando ausente,
- * a geração cai no comportamento automático (embaralhar / distribuir sozinho).
- */
 export interface Arrangement {
 	/** Para 'grupos': cada grupo com seus times, na ordem/posição desejada. */
 	groups?: string[][];
