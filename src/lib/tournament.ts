@@ -4,7 +4,7 @@
 // Tudo roda no cliente; a página chama generateTournament() uma vez na
 // configuração e updateTournament() após cada edição de resultado.
 
-import type { Config, ManualStanding, Match, Phase, Sport, Tournament } from './types';
+import type { Config, Format, Gender, ManualStanding, Match, Phase, Sport, Tournament } from './types';
 
 /**
  * Organização manual dos times, definida pelo usuário no cadastro. Quando ausente,
@@ -133,24 +133,33 @@ export function calculateStandings(teams: string[], matches: Match[], sport: Spo
 		if (!m.played) continue;
 		const home = rows.get(m.home);
 		const away = rows.get(m.away);
-		if (!home || !away) continue;
-
-		home.played++; away.played++;
+		// Credita cada lado que pertença a esta tabela de forma independente. Em
+		// grupos normais ambos estão presentes; em jogos cruzados (basquete
+		// masculino: Grupo A x Grupo B) só um dos times pertence à tabela do grupo.
+		if (!home && !away) continue;
 
 		const winner = matchWinner(m, sport);
-		home.points += matchPoints(m, 'home', sport);
-		away.points += matchPoints(m, 'away', sport);
-
-		if (winner === 'home')      { home.wins++; away.losses++; }
-		else if (winner === 'away') { away.wins++; home.losses++; }
-		else                        { home.draws++; away.draws++; }
-
 		const hFor = sport === 'volei' ? (m.homeSets ?? 0) : (m.homeScore ?? 0);
 		const aFor = sport === 'volei' ? (m.awaySets ?? 0) : (m.awayScore ?? 0);
-		home.goalsFor += hFor; home.goalsAgainst += aFor;
-		away.goalsFor += aFor; away.goalsAgainst += hFor;
-		home.diff = home.goalsFor - home.goalsAgainst;
-		away.diff = away.goalsFor - away.goalsAgainst;
+
+		if (home) {
+			home.played++;
+			home.points += matchPoints(m, 'home', sport);
+			if (winner === 'home')      home.wins++;
+			else if (winner === 'away') home.losses++;
+			else                        home.draws++;
+			home.goalsFor += hFor; home.goalsAgainst += aFor;
+			home.diff = home.goalsFor - home.goalsAgainst;
+		}
+		if (away) {
+			away.played++;
+			away.points += matchPoints(m, 'away', sport);
+			if (winner === 'away')      away.wins++;
+			else if (winner === 'home') away.losses++;
+			else                        away.draws++;
+			away.goalsFor += aFor; away.goalsAgainst += hFor;
+			away.diff = away.goalsFor - away.goalsAgainst;
+		}
 	}
 
 	return [...rows.values()].sort((a, b) => {
@@ -294,6 +303,77 @@ function generateGroups(groups: string[][]): Phase[] {
 	});
 }
 
+/**
+ * Geração especial do BASQUETE MASCULINO. Os grupos são tratados aos pares:
+ * cada dupla de grupos joga cruzado (todos do Grupo A contra todos do Grupo B),
+ * e um eventual grupo "sobrando" (número ímpar de grupos) joga round-robin
+ * interno. Cada grupo mantém sua própria classificação (subGroups), mesmo
+ * compartilhando os jogos cruzados. Não há mata-mata.
+ *
+ * Ex.: A(3), B(3), C(4) → "Grupo A x Grupo B" com 9 jogos cruzados + "Grupo C"
+ * com 6 jogos internos = 15 jogos na fase.
+ */
+function generateBasketballGroups(groups: string[][]): Phase[] {
+	const letter = (i: number) => String.fromCharCode(65 + i);
+	const phases: Phase[] = [];
+
+	for (let i = 0; i < groups.length; ) {
+		const g1 = groups[i];
+		const g2 = groups[i + 1];
+
+		if (g2) {
+			// Par cruzado: cada time de g1 enfrenta cada time de g2 exatamente uma vez.
+			// A rotação distribui os confrontos em "rodadas" só para fins de exibição.
+			const matches: Match[] = [];
+			const L = g2.length;
+			for (let r = 0; r < L; r++) {
+				for (let a = 0; a < g1.length; a++) {
+					const m = blankMatch(g1[a], g2[(a + r) % L]);
+					m.round = r + 1;
+					matches.push(m);
+				}
+			}
+			phases.push({
+				id: uid('group'),
+				name: `Grupo ${letter(i)} x Grupo ${letter(i + 1)}`,
+				type: 'group',
+				teams: [...g1, ...g2],
+				subGroups: [
+					{ name: `Grupo ${letter(i)}`,     teams: [...g1] },
+					{ name: `Grupo ${letter(i + 1)}`, teams: [...g2] },
+				],
+				matches,
+				status: 'pending',
+			});
+			i += 2;
+		} else {
+			// Grupo sobrando: round-robin interno (todos contra todos no grupo).
+			const rounds = roundRobinRounds(g1);
+			const matches: Match[] = [];
+			rounds.forEach((round, rIdx) => round.forEach(([h, a]) => {
+				const m = blankMatch(h, a);
+				m.round = rIdx + 1;
+				matches.push(m);
+			}));
+			phases.push({
+				id: uid('group'),
+				name: `Grupo ${letter(i)}`,
+				type: 'group',
+				teams: [...g1],
+				matches,
+				status: 'pending',
+			});
+			i += 1;
+		}
+	}
+	return phases;
+}
+
+/** O basquete masculino usa o formato cruzado entre grupos (sem mata-mata). */
+function isBasketballMasculino(config: Config): boolean {
+	return config.sport === 'basquete' && config.gender === 'masculino';
+}
+
 // ---------------------------------------------------------------------------
 // Geração — formato "Mata-Mata" (single elimination bracket)
 // ---------------------------------------------------------------------------
@@ -385,6 +465,9 @@ export function generateTournament(config: Config, arrangement?: Arrangement): T
 		phases = generateRoundRobin(arrangement?.order ?? shuffle(config.teams));
 	else if (config.format === 'mata-mata')
 		phases = buildKnockoutBracket(arrangement?.order ?? shuffle(config.teams));
+	else if (isBasketballMasculino(config))
+		// Basquete masculino: grupos cruzados (A x B) + grupo solto interno, sem mata-mata.
+		phases = generateBasketballGroups(arrangement?.groups ?? autoGroups(config.teams));
 	else
 		phases = generateGroups(arrangement?.groups ?? autoGroups(config.teams));
 
@@ -443,7 +526,8 @@ export function updateTournament(t: Tournament): Tournament {
 	}
 
 	// 2) Em formato "grupos": gerar mata-mata quando todos os grupos estiverem concluídos.
-	if (t.config.format === 'grupos') {
+	//    (Exceto basquete masculino, que usa tabelas separadas e não tem mata-mata.)
+	if (t.config.format === 'grupos' && !isBasketballMasculino(t.config)) {
 		const groups    = t.phases.filter(p => p.type === 'group');
 		const knockouts = t.phases.filter(p => p.type === 'knockout');
 		const allDone   = groups.length > 0 && groups.every(g => g.status === 'completed');
@@ -519,8 +603,9 @@ export function updateTournament(t: Tournament): Tournament {
 				const w = matchWinner(finalMatch, t.config.sport);
 				t.champion = w === 'home' ? finalMatch.home : finalMatch.away;
 			}
-		} else if (t.config.format === 'grupos') {
+		} else if (t.config.format === 'grupos' && !isBasketballMasculino(t.config)) {
 			// Grupo único: campeão é o líder quando todos os jogos terminarem.
+			// (Basquete masculino não define campeão — tabelas separadas.)
 			const groups = t.phases.filter(p => p.type === 'group');
 			if (groups.length === 1 && groups[0].status === 'completed') {
 				const s = calculateStandings(groups[0].teams, groups[0].matches, t.config.sport);

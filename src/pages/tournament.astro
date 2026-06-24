@@ -229,8 +229,7 @@ import './css/tournament.css';
 
 		// Grupo: mostra classificação do próprio grupo + jogos.
 		if (phase.type === 'group') {
-			parts.push(`<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Classificação</h4>`);
-			parts.push(standingsTable(phase.teams, phase.matches, sport, 2, false, phase, true)); // top 2 destacados
+			parts.push(groupStandingsHtml(phase, sport, false, true));
 		}
 
 		// Lista de jogos (para group, round e knockout).
@@ -283,8 +282,7 @@ import './css/tournament.css';
 			body = `
 				<div class="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-5 p-5 md:p-6">
 					<div>
-						<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Classificação</h4>
-						${standingsTable(phase.teams, phase.matches, sport, 2, true, phase, false)}
+						${groupStandingsHtml(phase, sport, true, false)}
 					</div>
 					<div>
 						${groupRoundsCarousel(phase, sport)}
@@ -304,6 +302,27 @@ import './css/tournament.css';
 		}
 
 		return header + body;
+	}
+
+	/**
+	 * Classificação de uma fase de grupo. Quando a fase tem subGroups (basquete
+	 * masculino: Grupo A x Grupo B com jogos cruzados), renderiza uma tabela por
+	 * grupo a partir dos jogos compartilhados. Sem subGroups, uma única tabela.
+	 */
+	function groupStandingsHtml(phase: Phase, sport: Sport, extended: boolean, editable: boolean): string {
+		// Basquete masculino não tem mata-mata → não destaca "classificados".
+		const noKnockout = tournament!.config.sport === 'basquete' && tournament!.config.gender === 'masculino';
+		const qual = noKnockout ? 0 : 2;
+
+		if (phase.subGroups && phase.subGroups.length > 0) {
+			return phase.subGroups.map(sg => `
+				<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Classificação · ${escapeHtml(sg.name)}</h4>
+				${standingsTable(sg.teams, phase.matches, sport, qual, extended, phase, editable)}
+			`).join('<div class="h-4"></div>');
+		}
+
+		return `<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Classificação</h4>
+			${standingsTable(phase.teams, phase.matches, sport, qual, extended, phase, editable)}`;
 	}
 
 	function standingsTable(teams: string[], matches: Match[], sport: Sport, qualifiedTop: number, extended: boolean, phase?: Phase, editable = false): string {

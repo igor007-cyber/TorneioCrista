@@ -63,7 +63,7 @@ import MainLayout from '../layouts/main.astro';
 
 <script>
 	import { clearSession, getSession } from '../lib/auth';
-	import { listTournaments, loadTournaments } from '../lib/storage';
+	import { listTournaments, loadTournaments, deleteTournament } from '../lib/storage';
 	import { SPORT_LABEL, FORMAT_LABEL, GENDER_LABEL } from '../lib/tournament';
 	import type { Tournament } from '../lib/types';
 
@@ -118,9 +118,14 @@ import MainLayout from '../layouts/main.astro';
 			const created = new Date(t.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 			return `
-				<article class="cc-card rounded-2xl overflow-hidden cc-animate-in" style="animation-delay:${idx * 40}ms">
+				<article class="cc-card rounded-2xl overflow-hidden cc-animate-in relative" style="animation-delay:${idx * 40}ms">
+					<button type="button" data-delete-id="${encodeURIComponent(t.id)}" data-delete-name="${escapeHtml(t.name)}"
+							class="absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-lg grid place-items-center bg-white/85 backdrop-blur text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/70 shadow-sm transition"
+							title="Excluir torneio" aria-label="Excluir torneio">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+					</button>
 					<a href="/tournament?id=${encodeURIComponent(t.id)}" class="block p-5 md:p-6">
-						<div class="flex items-start gap-3 mb-4">
+						<div class="flex items-start gap-3 mb-4 pr-9">
 							<div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 grid place-items-center text-2xl shrink-0 shadow-md shadow-blue-500/30">
 								${sportIcon(t.config.sport)}
 							</div>
@@ -175,6 +180,25 @@ import MainLayout from '../layouts/main.astro';
 				</article>
 			`;
 		}).join('');
+
+		attachDeleteListeners();
+	}
+
+	/** Liga os botões de lixeira de cada card. Confirma antes de excluir. */
+	function attachDeleteListeners(): void {
+		grid.querySelectorAll<HTMLButtonElement>('[data-delete-id]').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				const id   = decodeURIComponent(btn.dataset.deleteId ?? '');
+				const name = btn.dataset.deleteName ?? 'este torneio';
+				if (!id) return;
+				if (confirm(`Excluir o torneio "${name}"?\n\nEsta ação não pode ser desfeita e remove o torneio para todos.`)) {
+					deleteTournament(id);
+					renderCards();
+				}
+			});
+		});
 	}
 
 	if (headerEl && session) {

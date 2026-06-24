@@ -299,7 +299,9 @@ import MainLayout from '../layouts/main.astro';
 			distributeGroups(suggested);
 			groupCountRow.classList.remove('hidden');
 			groupCountRow.classList.add('flex');
-			arrangeSub.textContent = 'Escolha a quantidade de grupos e posicione cada time. Os 2 primeiros de cada grupo avançam.';
+			arrangeSub.textContent = (config.sport === 'basquete' && config.gender === 'masculino')
+				? 'Escolha os grupos e posicione cada time. Os grupos jogam cruzados em dupla (Grupo A x Grupo B); um grupo sobrando joga entre si. Cada grupo tem sua própria tabela.'
+				: 'Escolha a quantidade de grupos e posicione cada time. Os 2 primeiros de cada grupo avançam.';
 		} else {
 			order = [...config.teams];
 			groupCountRow.classList.add('hidden');

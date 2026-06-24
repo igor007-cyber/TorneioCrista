@@ -297,8 +297,7 @@ import MainLayout from '../layouts/main.astro';
 			body = `
 				<div class="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-5 p-5 md:p-6">
 					<div>
-						<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Classificação</h4>
-						${standingsTable(phase.teams, phase.matches, sport, 2, true, phase)}
+						${groupStandingsHtml(phase, sport, tournament)}
 					</div>
 					<div>
 						${groupRoundsCarousel(phase, sport)}
@@ -324,6 +323,25 @@ import MainLayout from '../layouts/main.astro';
 				${body}
 			</article>
 		`;
+	}
+
+	/**
+	 * Classificação de uma fase de grupo. Com subGroups (basquete masculino:
+	 * Grupo A x Grupo B), uma tabela por grupo a partir dos jogos compartilhados.
+	 */
+	function groupStandingsHtml(phase: Phase, sport: Sport, tournament: Tournament): string {
+		const noKnockout = tournament.config.sport === 'basquete' && tournament.config.gender === 'masculino';
+		const qual = noKnockout ? 0 : 2;
+
+		if (phase.subGroups && phase.subGroups.length > 0) {
+			return phase.subGroups.map(sg => `
+				<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Classificação · ${escapeHtml(sg.name)}</h4>
+				${standingsTable(sg.teams, phase.matches, sport, qual, true, phase)}
+			`).join('<div class="h-4"></div>');
+		}
+
+		return `<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Classificação</h4>
+			${standingsTable(phase.teams, phase.matches, sport, qual, true, phase)}`;
 	}
 
 	function standingsTable(teams: string[], matches: Match[], sport: Sport, qualifiedTop: number, extended: boolean, phase?: Phase): string {

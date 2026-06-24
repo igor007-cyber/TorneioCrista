@@ -61,6 +61,10 @@ export interface Phase {
 	status:  'pending' | 'in-progress' | 'completed';
 	// Overrides manuais da classificação, por nome do time. Opcional.
 	manualStandings?: Record<string, ManualStanding>;
+	// Subdivisões de uma mesma fase que compartilham os jogos mas exibem
+	// classificações separadas. Usado no basquete masculino, onde o Grupo A
+	// enfrenta o Grupo B (jogos cruzados) mas cada grupo mantém sua própria tabela.
+	subGroups?: { name: string; teams: string[] }[];
 }
 
 export interface Tournament {

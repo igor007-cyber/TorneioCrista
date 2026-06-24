@@ -7,7 +7,11 @@
       "Bash(curl -s \"http://localhost:4399/src/pages/painel.astro?astro&type=script&index=1&lang.ts\")",
       "Bash(curl -s \"http://localhost:4399/src/lib/storage.ts\")",
       "PowerShell(Get-NetTCPConnection -LocalPort 4399 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { try { Stop-Process -Id $_ -Force -ErrorAction Stop; \"Encerrado PID $_\" } catch {} })",
-      "Bash(npx astro *)"
+      "Bash(npx astro *)",
+      "Bash(curl -s \"https://nxuyizkyaxpqcxmtbkpa.supabase.co/rest/v1/tournaments?select=id,name,gender,sport,format,teams,champion\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54dXlpemt5YXhwcWN4bXRia3BhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0MzcxMzMsImV4cCI6MjA5NTAxMzEzM30.e3P9HqWWMaNNwyQDz1W4zHLRz6GijnUB5zFyVIdOIBo\")",
+      "Bash(yes)",
+      "Bash(ls node_modules/.bin/esbuild*)",
+      "Bash(ls node_modules/esbuild/package.json)"
     ]
   }
 }
