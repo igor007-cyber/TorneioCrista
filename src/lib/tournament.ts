@@ -364,6 +364,66 @@ function isBasketballMasculino(config: Config): boolean {
 	return config.sport === 'basquete' && config.gender === 'masculino';
 }
 
+/**
+ * Categorias que usam o calendário de grupos reduzido (ver regras abaixo):
+ * futsal feminino, vôlei masculino e basquete feminino.
+ */
+function usesReducedGroups(config: Config): boolean {
+	return (config.sport === 'futebol'  && config.gender === 'feminino')
+		|| (config.sport === 'volei'    && config.gender === 'masculino')
+		|| (config.sport === 'basquete' && config.gender === 'feminino');
+}
+
+/**
+ * Confrontos (por posição dentro do grupo) do calendário REDUZIDO conforme o
+ * regulamento dessas categorias. Cada time joga 2 partidas.
+ *   - Grupo de 5: 1x2, 3x4 (rodada 1), 1x5, 2x3 (rodada 2) e 4x5 (rodada 3).
+ *   - Grupo de 4: 1x2, 3x4 (rodada 1) e 1x3, 2x4 (rodada 2).
+ *   - Grupo de 3: todos contra todos — 1x2, 1x3, 2x3.
+ * Retorna null para tamanhos diferentes (cai no round-robin padrão).
+ */
+function reducedGroupPairs(size: number): Array<[number, number]> | null {
+	if (size === 5) return [[0, 1], [2, 3], [0, 4], [1, 2], [3, 4]];
+	if (size === 4) return [[0, 1], [2, 3], [0, 2], [1, 3]];
+	if (size === 3) return [[0, 1], [0, 2], [1, 2]];
+	return null;
+}
+
+/** Monta as fases de grupo com o calendário reduzido. */
+function generateReducedGroups(groups: string[][]): Phase[] {
+	return groups.map((gTeams, i) => {
+		const pairs = reducedGroupPairs(gTeams.length);
+		const matches: Match[] = [];
+
+		if (pairs) {
+			// Grupos de 4/5 → 2 jogos por rodada; grupo de 3 → 1 jogo por rodada.
+			const perRound = gTeams.length === 3 ? 1 : 2;
+			pairs.forEach(([a, b], idx) => {
+				const m = blankMatch(gTeams[a], gTeams[b]);
+				m.round = Math.floor(idx / perRound) + 1;
+				matches.push(m);
+			});
+		} else {
+			// Tamanho fora do previsto: round-robin completo (fallback).
+			const rounds = roundRobinRounds(gTeams);
+			rounds.forEach((r, rIdx) => r.forEach(([h, a]) => {
+				const m = blankMatch(h, a);
+				m.round = rIdx + 1;
+				matches.push(m);
+			}));
+		}
+
+		return {
+			id: uid('group'),
+			name: `Grupo ${String.fromCharCode(65 + i)}`,
+			type: 'group' as const,
+			teams: gTeams,
+			matches,
+			status: 'pending' as const,
+		};
+	});
+}
+
 // ---------------------------------------------------------------------------
 // Geração — formato "Mata-Mata" (single elimination bracket)
 // ---------------------------------------------------------------------------
@@ -458,6 +518,10 @@ export function generateTournament(config: Config, arrangement?: Arrangement): T
 	else if (isBasketballMasculino(config))
 		// Basquete masculino: grupos cruzados (A x B) + grupo solto interno, sem mata-mata.
 		phases = generateBasketballGroups(arrangement?.groups ?? autoGroups(config.teams));
+	else if (usesReducedGroups(config))
+		// Futsal feminino / vôlei masculino: calendário de grupos reduzido
+		// (grupo de 4 = 4 jogos; de 3 = 3 jogos).
+		phases = generateReducedGroups(arrangement?.groups ?? autoGroups(config.teams));
 	else
 		phases = generateGroups(arrangement?.groups ?? autoGroups(config.teams));
 
