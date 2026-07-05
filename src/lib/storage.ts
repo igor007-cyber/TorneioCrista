@@ -18,6 +18,7 @@ import { supabase } from './supabase';
 
 const KEY      = 'copacrista:tournaments:v1';
 const OLD_KEY  = 'copacrista:tournament:v1';   // formato antigo (torneio único)
+const TOMB_KEY = 'copacrista:tombstones:v1';   // ids de torneios excluídos (lápides)
 
 // ---------------------------------------------------------------------------
 // Cache local (síncrono)
@@ -60,6 +61,35 @@ function readCache(): Tournament[] {
 
 function writeCache(list: Tournament[]): void {
 	try { localStorage.setItem(KEY, JSON.stringify(list)); } catch {}
+}
+
+// ---------------------------------------------------------------------------
+// Lápides (tombstones) — ids de torneios excluídos
+// ---------------------------------------------------------------------------
+// A sincronização re-sobe para o banco qualquer torneio que exista só no cache
+// (para recuperar itens criados offline). Sem um registro do que foi apagado,
+// isso RESSUSCITA torneios excluídos: some da tela, mas volta no próximo load.
+// As lápides marcam ids removidos para que nunca sejam re-enviados e para forçar
+// a exclusão no banco caso reapareçam (ex.: re-subidos por outro dispositivo).
+
+function readTombstones(): Set<string> {
+	try {
+		const raw = localStorage.getItem(TOMB_KEY);
+		const arr = raw ? JSON.parse(raw) : [];
+		return new Set(Array.isArray(arr) ? arr : []);
+	} catch {
+		return new Set();
+	}
+}
+
+function writeTombstones(ids: Set<string>): void {
+	try { localStorage.setItem(TOMB_KEY, JSON.stringify([...ids])); } catch {}
+}
+
+function addTombstone(id: string): void {
+	const ids = readTombstones();
+	ids.add(id);
+	writeTombstones(ids);
 }
 
 // ---------------------------------------------------------------------------
@@ -113,10 +143,12 @@ function tournamentToRow(t: Tournament): Row {
 // ---------------------------------------------------------------------------
 
 export function listTournaments(): Tournament[] {
-	return readCache();
+	const tomb = readTombstones();
+	return readCache().filter(t => !tomb.has(t.id));
 }
 
 export function getTournament(id: string): Tournament | null {
+	if (readTombstones().has(id)) return null;
 	return readCache().find(t => t.id === id) ?? null;
 }
 
@@ -144,11 +176,21 @@ export async function loadTournaments(): Promise<Tournament[]> {
 		return local; // fallback offline — NÃO sobrescreve o cache
 	}
 
-	const remote    = (data ?? []).map(row => rowToTournament(row as Row));
+	const tomb      = readTombstones();
+	const remoteAll = (data ?? []).map(row => rowToTournament(row as Row));
+
+	// Se um torneio excluído reaparecer no banco (ex.: re-subido por outro
+	// dispositivo com cache antigo), força a remoção de novo e o mantém fora.
+	for (const t of remoteAll) {
+		if (tomb.has(t.id)) void supabase.from('tournaments').delete().eq('id', t.id);
+	}
+
+	const remote    = remoteAll.filter(t => !tomb.has(t.id));
 	const remoteIds = new Set(remote.map(t => t.id));
 
-	// Torneios presentes só no navegador → sobe pro banco (recupera/migra) e mantém.
-	const localOnly = local.filter(t => !remoteIds.has(t.id));
+	// Torneios presentes só no navegador (e não excluídos) → sobe pro banco
+	// (recupera/migra itens criados offline) e mantém.
+	const localOnly = local.filter(t => !remoteIds.has(t.id) && !tomb.has(t.id));
 	for (const t of localOnly) void saveTournamentRemote(t);
 
 	const merged = [...remote, ...localOnly].sort((a, b) => b.createdAt - a.createdAt);
@@ -220,12 +262,15 @@ export function saveTournament(t: Tournament): void {
 }
 
 export function deleteTournament(id: string): void {
-	// Cache local.
+	// Cache local + lápide (impede que a sincronização o ressuscite).
 	writeCache(readCache().filter(t => t.id !== id));
+	addTombstone(id);
 
-	// Banco.
+	// Cancela qualquer gravação pendente que pudesse re-subir este torneio.
 	const prev = pendingSaves.get(id);
 	if (prev) { clearTimeout(prev); pendingSaves.delete(id); }
+
+	// Banco. Se falhar agora, a lápide garante nova tentativa no próximo load.
 	void supabase.from('tournaments').delete().eq('id', id).then(({ error }) => {
 		if (error) console.error('[storage] falha ao excluir torneio no banco:', error.message);
 	});

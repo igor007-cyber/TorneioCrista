@@ -13,7 +13,11 @@
       "Bash(ls node_modules/.bin/esbuild*)",
       "Bash(ls node_modules/esbuild/package.json)",
       "Bash(npx tsc *)",
-      "Bash(node --experimental-strip-types __test_groups.ts)"
+      "Bash(node --experimental-strip-types __test_groups.ts)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "Bash(curl -s -o /dev/null -w \"google: %{http_code}\\\\n\" https://www.google.com --max-time 10)",
+      "Bash(curl -s -o /dev/null -w \"supabase.com: %{http_code}\\\\n\" https://supabase.com --max-time 10)",
+      "Bash(nslookup nxuyizkyaxpqcxmtbkpa.supabase.co)"
     ]
   }
 }

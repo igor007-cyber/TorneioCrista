@@ -196,6 +196,9 @@ import MainLayout from '../layouts/main.astro';
 				if (confirm(`Excluir o torneio "${name}"?\n\nEsta ação não pode ser desfeita e remove o torneio para todos.`)) {
 					deleteTournament(id);
 					renderCards();
+					// Re-sincroniza com o banco para confirmar a remoção (e evitar que
+					// um cache antigo o traga de volta).
+					loadTournaments().then(renderCards);
 				}
 			});
 		});
