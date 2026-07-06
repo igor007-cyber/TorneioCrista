@@ -2,8 +2,11 @@
 //
 // Fonte da verdade = tabela `tournaments` no Supabase (compartilhada entre todos
 // os navegadores/dispositivos e exibida na página pública). O localStorage é
-// mantido apenas como CACHE síncrono: a renderização lê dele de forma imediata
-// (sem await) e ele também serve de fallback quando o banco está indisponível.
+// APENAS um cache: a renderização lê dele de forma imediata (sem await) e ele
+// também serve de fallback de leitura quando o banco está indisponível. O cache
+// nunca é fonte da verdade — loadTournaments() o sobrescreve com o que vem do
+// banco e nada que exista só na memória é re-enviado (evita que um navegador
+// ressuscite ou propague torneios que não estão no Supabase).
 //
 // Fluxo:
 //   * leitura  → as páginas chamam loadTournaments()/loadTournament() (async) na
@@ -157,11 +160,14 @@ export function getTournament(id: string): Tournament | null {
 // ---------------------------------------------------------------------------
 
 /**
- * Busca todos os torneios no Supabase e MESCLA com o cache local (sem destruir).
+ * Busca todos os torneios no Supabase — que é a ÚNICA fonte da verdade — e
+ * substitui o cache local pelo resultado.
  *
- * Importante: torneios que só existem localmente (criados antes do banco virar a
- * fonte da verdade, ou enquanto offline) são empurrados PARA o banco e mantidos
- * na lista — assim nada some da tela ao sincronizar.
+ * O localStorage é apenas um cache de pintura rápida (e fallback de LEITURA
+ * quando o banco está indisponível). Ele NUNCA é re-enviado ao banco: se um
+ * torneio não está no Supabase, ele não aparece. Torneios novos entram no banco
+ * na hora da criação (saveTournamentRemote), não por sincronização de cache —
+ * assim um navegador nunca ressuscita nem propaga o que só existe na sua memória.
  */
 export async function loadTournaments(): Promise<Tournament[]> {
 	const local = readCache();
@@ -185,17 +191,13 @@ export async function loadTournaments(): Promise<Tournament[]> {
 		if (tomb.has(t.id)) void supabase.from('tournaments').delete().eq('id', t.id);
 	}
 
-	const remote    = remoteAll.filter(t => !tomb.has(t.id));
-	const remoteIds = new Set(remote.map(t => t.id));
+	// Banco = fonte da verdade. O cache passa a refletir exatamente o remoto.
+	const remote = remoteAll
+		.filter(t => !tomb.has(t.id))
+		.sort((a, b) => b.createdAt - a.createdAt);
 
-	// Torneios presentes só no navegador (e não excluídos) → sobe pro banco
-	// (recupera/migra itens criados offline) e mantém.
-	const localOnly = local.filter(t => !remoteIds.has(t.id) && !tomb.has(t.id));
-	for (const t of localOnly) void saveTournamentRemote(t);
-
-	const merged = [...remote, ...localOnly].sort((a, b) => b.createdAt - a.createdAt);
-	writeCache(merged);
-	return merged;
+	writeCache(remote);
+	return remote;
 }
 
 /** Busca um torneio específico no banco e atualiza o cache local. */

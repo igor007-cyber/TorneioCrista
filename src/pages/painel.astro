@@ -53,7 +53,40 @@ import MainLayout from '../layouts/main.astro';
 			Os dados ficam salvos apenas no seu navegador. Limpar os dados do site apaga os torneios.
 		</footer>
 	</main>
+
+	<!-- Modal de confirmação de exclusão -->
+	<div id="delete-modal" class="hidden fixed inset-0 z-50 grid place-items-center px-4">
+		<div id="delete-backdrop" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+		<div role="dialog" aria-modal="true" aria-labelledby="delete-modal-title"
+				 class="cc-modal relative w-full max-w-md rounded-3xl bg-white p-6 md:p-7 shadow-2xl">
+			<div class="mx-auto w-14 h-14 rounded-2xl bg-rose-50 grid place-items-center text-rose-600 mb-4">
+				<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+			</div>
+			<h2 id="delete-modal-title" class="text-lg font-bold text-slate-900 text-center mb-1.5">Excluir torneio?</h2>
+			<p class="text-sm text-slate-600 text-center mb-1">
+				Você tem certeza que deseja excluir <strong id="delete-modal-name" class="text-slate-900">este torneio</strong>?
+			</p>
+			<p class="text-xs text-slate-500 text-center mb-6">
+				Esta ação não pode ser desfeita e remove o torneio para todos.
+			</p>
+			<div class="flex flex-col-reverse sm:flex-row gap-3">
+				<button type="button" id="delete-cancel" class="cc-btn cc-btn-ghost flex-1 justify-center">Cancelar</button>
+				<button type="button" id="delete-confirm" class="cc-btn flex-1 justify-center bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-500">
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+					Excluir
+				</button>
+			</div>
+		</div>
+	</div>
 </MainLayout>
+
+<style>
+	.cc-modal { animation: cc-modal-in .18s cubic-bezier(.16,1,.3,1); }
+	@keyframes cc-modal-in {
+		from { opacity: 0; transform: translateY(8px) scale(.96); }
+		to   { opacity: 1; transform: translateY(0)   scale(1);   }
+	}
+</style>
 
 <script>
 	import { requireSession } from '../lib/auth';
@@ -184,7 +217,46 @@ import MainLayout from '../layouts/main.astro';
 		attachDeleteListeners();
 	}
 
-	/** Liga os botões de lixeira de cada card. Confirma antes de excluir. */
+	// ── Modal de confirmação de exclusão ─────────────────────────────────────
+	const deleteModal   = document.getElementById('delete-modal')!    as HTMLElement;
+	const deleteBackdrop= document.getElementById('delete-backdrop')! as HTMLElement;
+	const deleteNameEl  = document.getElementById('delete-modal-name')! as HTMLElement;
+	const cancelBtn     = document.getElementById('delete-cancel')!   as HTMLButtonElement;
+	const confirmBtn    = document.getElementById('delete-confirm')!  as HTMLButtonElement;
+	let pendingDeleteId: string | null = null;
+
+	function openDeleteModal(id: string, name: string): void {
+		pendingDeleteId = id;
+		deleteNameEl.textContent = `"${name}"`;
+		deleteModal.classList.remove('hidden');
+		document.body.style.overflow = 'hidden';
+		confirmBtn.focus();
+	}
+
+	function closeDeleteModal(): void {
+		pendingDeleteId = null;
+		deleteModal.classList.add('hidden');
+		document.body.style.overflow = '';
+	}
+
+	cancelBtn.addEventListener('click', closeDeleteModal);
+	deleteBackdrop.addEventListener('click', closeDeleteModal);
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape' && !deleteModal.classList.contains('hidden')) closeDeleteModal();
+	});
+
+	confirmBtn.addEventListener('click', () => {
+		const id = pendingDeleteId;
+		closeDeleteModal();
+		if (!id) return;
+		deleteTournament(id);
+		renderCards();
+		// Re-sincroniza com o banco para confirmar a remoção (e evitar que
+		// um cache antigo o traga de volta).
+		loadTournaments().then(renderCards);
+	});
+
+	/** Liga os botões de lixeira de cada card. Abre o modal de confirmação. */
 	function attachDeleteListeners(): void {
 		grid.querySelectorAll<HTMLButtonElement>('[data-delete-id]').forEach(btn => {
 			btn.addEventListener('click', (e) => {
@@ -193,13 +265,7 @@ import MainLayout from '../layouts/main.astro';
 				const id   = decodeURIComponent(btn.dataset.deleteId ?? '');
 				const name = btn.dataset.deleteName ?? 'este torneio';
 				if (!id) return;
-				if (confirm(`Excluir o torneio "${name}"?\n\nEsta ação não pode ser desfeita e remove o torneio para todos.`)) {
-					deleteTournament(id);
-					renderCards();
-					// Re-sincroniza com o banco para confirmar a remoção (e evitar que
-					// um cache antigo o traga de volta).
-					loadTournaments().then(renderCards);
-				}
+				openDeleteModal(id, name);
 			});
 		});
 	}
