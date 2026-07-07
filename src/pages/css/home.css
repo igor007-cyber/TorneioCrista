@@ -263,6 +263,13 @@ a {
     font-weight: 700;
 }
 
+/* Espaço horizontal fixo dentro de uma linha (ex.: após o nome).
+   Ajuste o width para aumentar/diminuir o vão. */
+.plx-name-gap {
+    display: inline-block;
+    width: 4em;
+}
+
 .plx-hero-actions {
     display: flex;
     flex-wrap: wrap;
