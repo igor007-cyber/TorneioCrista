@@ -17,7 +17,15 @@
       "mcp__claude_ai_Supabase__list_projects",
       "Bash(curl -s -o /dev/null -w \"google: %{http_code}\\\\n\" https://www.google.com --max-time 10)",
       "Bash(curl -s -o /dev/null -w \"supabase.com: %{http_code}\\\\n\" https://supabase.com --max-time 10)",
-      "Bash(nslookup nxuyizkyaxpqcxmtbkpa.supabase.co)"
+      "Bash(nslookup nxuyizkyaxpqcxmtbkpa.supabase.co)",
+      "Bash(curl -s -L -o hero.png \"https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/088-I-Copa-Crista_05jul25_manha_8670.png?bwg=1752182755\")",
+      "Bash(curl -s -L -o story.jpeg \"https://i.imgur.com/Tgu7sY0.jpeg\")",
+      "Bash(curl -s -L -o g1.jpeg \"https://i.imgur.com/VkV4oZo.jpeg\")",
+      "Bash(curl -s -L -o g2.jpeg \"https://i.imgur.com/icLWnGQ.jpeg\")",
+      "Bash(curl -s -L -o g3.jpeg \"https://i.imgur.com/E7AzcHB.jpeg\")",
+      "Bash(curl -s -L -o new.jpeg \"https://i.imgur.com/psV720a.jpeg\")",
+      "Bash(curl -s -L -o new2.jpeg \"https://i.imgur.com/nPeQYGT.jpeg\")",
+      "Bash(curl -s -L -o hero_new.jpeg \"https://i.imgur.com/CxeBixA.jpeg\")"
     ]
   }
 }
