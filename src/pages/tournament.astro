@@ -6,7 +6,7 @@ import './css/tournament.css';
 ---
 
 <MainLayout title="CopaCrista — Torneio">
-	<main class="max-w-7xl mx-auto px-5 py-8 md:py-10">
+	<main class="max-w-7xl mx-auto px-5 py-10">
 		<!-- Cabeçalho -->
 		<header id="tournament-header" class="cc-animate-in"></header>
 
@@ -106,7 +106,7 @@ import './css/tournament.css';
 						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
 						Meus torneios
 					</a>
-					<h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+					<h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">
 						Campeonato ${escapeHtml(GENDER_LABEL[gender])} de ${escapeHtml(SPORT_LABEL[sport])}
 					</h1>
 					<p class="text-slate-600 text-sm mt-1">
@@ -136,9 +136,9 @@ import './css/tournament.css';
 			return;
 		}
 		bannerEl.classList.remove('hidden');
-		bannerEl.className = 'cc-champion cc-pop-in rounded-3xl px-6 py-5 md:py-6 mb-8 flex items-center gap-5 shadow-lg';
+		bannerEl.className = 'cc-champion cc-pop-in rounded-3xl px-6 py-6 mb-8 flex items-center gap-5 shadow-lg';
 		bannerEl.innerHTML = `
-			<div class="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/30 grid place-items-center shrink-0">
+			<div class="w-16 h-16 rounded-2xl bg-white/30 grid place-items-center shrink-0">
 				<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
 					<path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
@@ -149,8 +149,8 @@ import './css/tournament.css';
 				</svg>
 			</div>
 			<div>
-				<p class="text-xs md:text-sm font-semibold uppercase tracking-widest opacity-80">🏆 Campeão</p>
-				<p class="text-2xl md:text-3xl font-extrabold leading-tight">${escapeHtml(tournament.champion)}</p>
+				<p class="text-sm font-semibold uppercase tracking-widest opacity-80">🏆 Campeão</p>
+				<p class="text-3xl font-extrabold leading-tight">${escapeHtml(tournament.champion)}</p>
 			</div>
 		`;
 	}
@@ -191,16 +191,16 @@ import './css/tournament.css';
 		const phaseIcon = iconForPhase(phase.type);
 
 		return `
-			<button class="cc-card-toggle w-full text-left px-5 md:px-6 py-5 flex items-center gap-4 focus:outline-none">
+			<button class="cc-card-toggle w-full text-left px-6 py-5 flex items-center gap-4 focus:outline-none">
 				<div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white grid place-items-center shadow-md shadow-blue-500/30 shrink-0">
 					${phaseIcon}
 				</div>
 				<div class="flex-1 min-w-0">
 					<div class="flex items-center gap-2 flex-wrap">
-						<h3 class="font-bold text-slate-900 text-base md:text-lg truncate">${escapeHtml(phase.name)}</h3>
+						<h3 class="font-bold text-slate-900 text-lg truncate">${escapeHtml(phase.name)}</h3>
 						<span class="cc-badge ${statusClass}"><span class="cc-dot"></span>${statusText}</span>
 					</div>
-					<p class="text-xs md:text-sm text-slate-500 mt-0.5">
+					<p class="text-sm text-slate-500 mt-0.5">
 						${isStandings
 							? `${teamsCount} times • tabela consolidada`
 							: `${teamsCount} times • ${playedCount}/${matchesCount} jogos disputados`}
@@ -210,7 +210,7 @@ import './css/tournament.css';
 			</button>
 			<div class="cc-disclosure-body">
 				<div class="cc-disclosure-inner">
-					<div class="px-5 md:px-6 pb-6 pt-1 border-t border-blue-50 space-y-5">
+					<div class="px-6 pb-6 pt-1 border-t border-blue-50 space-y-5">
 						${phaseBodyHtml(phase, sport)}
 					</div>
 				</div>
@@ -256,13 +256,13 @@ import './css/tournament.css';
 
 		// Cabeçalho do card (sem botão de toggle — tudo aberto).
 		const header = `
-			<div class="px-5 md:px-6 py-5 flex items-center gap-4 border-b border-blue-50">
+			<div class="px-6 py-5 flex items-center gap-4 border-b border-blue-50">
 				<div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white grid place-items-center shadow-md shadow-blue-500/30 shrink-0">
 					${phaseIcon}
 				</div>
 				<div class="flex-1 min-w-0">
 					<div class="flex items-center gap-2 flex-wrap">
-						<h3 class="font-bold text-slate-900 text-lg md:text-xl uppercase tracking-wide">${escapeHtml(phase.name)}</h3>
+						<h3 class="font-bold text-slate-900 text-xl uppercase tracking-wide">${escapeHtml(phase.name)}</h3>
 						<span class="cc-badge ${statusClass}"><span class="cc-dot"></span>${statusText}</span>
 						<span class="cc-badge cc-badge-pending" title="Para editar resultados, volte ao Modo Compacto">
 							<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -277,10 +277,10 @@ import './css/tournament.css';
 
 		if (phase.type === 'standings') {
 			const allMatches = tournament!.phases.flatMap(p => p.type === 'round' ? p.matches : []);
-			body = `<div class="p-5 md:p-6">${standingsTable(tournament!.config.teams, allMatches, sport, 0, true, phase, false)}</div>`;
+			body = `<div class="p-6">${standingsTable(tournament!.config.teams, allMatches, sport, 0, true, phase, false)}</div>`;
 		} else if (phase.type === 'group') {
 			body = `
-				<div class="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-5 p-5 md:p-6">
+				<div class="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-5 p-6">
 					<div>
 						${groupStandingsHtml(phase, sport, true, false)}
 					</div>
@@ -291,7 +291,7 @@ import './css/tournament.css';
 			`;
 		} else {
 			// rodada ou mata-mata: sem tabela, jogos ocupam a largura total.
-			body = `<div class="p-5 md:p-6">
+			body = `<div class="p-6">
 				<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Jogos</h4>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 					${phase.matches.length > 0
@@ -441,7 +441,7 @@ import './css/tournament.css';
 		}
 
 		return `
-			<li class="rounded-xl border border-blue-50 bg-white/70 ${readonly ? '' : 'hover:bg-white'} transition px-3 py-3 md:px-4 md:py-3.5"
+			<li class="rounded-xl border border-blue-50 bg-white/70 ${readonly ? '' : 'hover:bg-white'} transition px-4 py-3.5"
 					data-match-id="${m.id}">
 				${header}
 				<div class="flex items-center gap-3">
