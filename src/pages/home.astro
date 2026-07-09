@@ -1,5 +1,4 @@
 ---
-import type { ImageMetadata } from 'astro';
 import MainLayout from '../layouts/main.astro';
 import logo from '../assets/logo.png';
 import logoConecta from '../assets/image/Logo Conecta branca.png';
@@ -18,15 +17,15 @@ const navItems = [
 	{ label: 'Jogos', href: '/vizualizarTorneio' },
 ];
 
-const sponsors: { name: string; image: ImageMetadata; scale?: number }[] = [
+const sponsors = [
 	{ name: 'Conecta', image: logoConecta },
 	{ name: 'ICAR', image: logoIcar },
 	{ name: 'Maria P', image: logoMariaP },
 	{ name: 'Patrocinador', image: logoPng },
 	{ name: 'Rio Verde', image: logoRioVerde },
-	{ name: 'Roger e Tadeu', image: logoRogerTadeu, scale: 2.5 },
+	{ name: 'Roger e Tadeu', image: logoRogerTadeu },
 	{ name: 'Supri', image: logoSupri },
-	{ name: 'STA', image: logoSta, scale: 0.75 },
+	{ name: 'STA', image: logoSta },
 ];
 
 const socialImages = [
@@ -135,15 +134,16 @@ const socialImages = [
 		<section class="plx-social-wall">
 			<div class="plx-sponsors">
 				<p class="plx-sponsors-label">Patrocinadores</p>
-				<div class="plx-sponsors-grid">
-					{sponsors.map((sponsor) => (
-						<img
-						src={sponsor.image.src}
-						alt={`Logo ${sponsor.name}`}
-						loading="lazy"
-						style={sponsor.scale ? `--sponsor-scale: ${sponsor.scale}` : undefined}
-					/>
-					))}
+				<div class="plx-sponsors-marquee" data-sponsors-marquee>
+					<div class="plx-sponsors-track" data-sponsors-track>
+						{[0, 1].map((copy) => (
+							<div class="plx-sponsors-group" aria-hidden={copy === 1 ? 'true' : undefined}>
+								{sponsors.map((sponsor) => (
+									<img src={sponsor.image.src} alt={`Logo ${sponsor.name}`} loading="lazy" />
+								))}
+							</div>
+						))}
+					</div>
 				</div>
 			</div>
 
@@ -193,4 +193,47 @@ const socialImages = [
 			</div>
 		</footer>
 	</main>
+
+	<script>
+		import gsap from 'gsap';
+
+		const marquee = document.querySelector<HTMLElement>('[data-sponsors-marquee]');
+		const track = document.querySelector<HTMLElement>('[data-sponsors-track]');
+
+		if (marquee && track && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			const PIXELS_PER_SECOND = 30;
+			let tween: gsap.core.Tween | null = null;
+
+			// O track contém duas cópias idênticas da lista, então deslocar 50% da sua
+			// largura recoloca a segunda cópia exatamente onde a primeira começou.
+			const build = () => {
+				tween?.kill();
+				gsap.set(track, { xPercent: 0 });
+				const loopWidth = track.scrollWidth / 2;
+				if (loopWidth === 0) return;
+				tween = gsap.to(track, {
+					xPercent: -50,
+					ease: 'none',
+					repeat: -1,
+					duration: loopWidth / PIXELS_PER_SECOND,
+				});
+			};
+
+			build();
+
+			marquee.addEventListener('pointerenter', () => tween?.pause());
+			marquee.addEventListener('pointerleave', () => tween?.play());
+
+			// As logos usam loading="lazy": a largura só é definitiva depois que cada
+			// uma decodifica, e o resize muda a altura base dos itens.
+			let resizeTimer = 0;
+			addEventListener('resize', () => {
+				clearTimeout(resizeTimer);
+				resizeTimer = setTimeout(build, 150);
+			});
+			for (const img of track.querySelectorAll('img')) {
+				if (!img.complete) img.addEventListener('load', build, { once: true });
+			}
+		}
+	</script>
 </MainLayout>

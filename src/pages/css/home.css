@@ -632,24 +632,37 @@ a {
     color: rgb(244 250 247 / 0.6);
 }
 
-.plx-sponsors-grid {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 32px 56px;
+.plx-sponsors-marquee {
+    --sponsor-gap: 56px;
+    --sponsor-height: 64px;
+    overflow: hidden;
+    /* Suaviza a entrada e a saída das logos nas laterais. */
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
 }
 
-.plx-sponsors-grid img {
-    height: calc(64px * var(--sponsor-scale, 1));
-    width: auto;
-    max-width: calc(180px * var(--sponsor-scale, 1));
+.plx-sponsors-track {
+    display: flex;
+    width: max-content;
+    will-change: transform;
+}
+
+.plx-sponsors-group {
+    display: flex;
+    align-items: center;
+    gap: var(--sponsor-gap);
+    /* Mantém o mesmo espaçamento na emenda entre as duas cópias da lista. */
+    padding-right: var(--sponsor-gap);
+}
+
+.plx-sponsors-group img {
+    height: var(--sponsor-height);
+    width: 180px;
     object-fit: contain;
     opacity: 0.85;
     transition: opacity 0.2s ease;
 }
 
-.plx-sponsors-grid img:hover {
+.plx-sponsors-group img:hover {
     opacity: 1;
 }
 
@@ -831,13 +844,13 @@ a {
         font-size: 2.2rem;
     }
 
-    .plx-sponsors-grid {
-        gap: 24px 32px;
+    .plx-sponsors-marquee {
+        --sponsor-gap: 32px;
+        --sponsor-height: 46px;
     }
 
-    .plx-sponsors-grid img {
-        height: calc(46px * var(--sponsor-scale, 1));
-        max-width: calc(130px * var(--sponsor-scale, 1));
+    .plx-sponsors-group img {
+        width: 130px;
     }
 
     .plx-hero-text,

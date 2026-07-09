@@ -26,7 +26,9 @@
       "Bash(curl -s -L -o new.jpeg \"https://i.imgur.com/psV720a.jpeg\")",
       "Bash(curl -s -L -o new2.jpeg \"https://i.imgur.com/nPeQYGT.jpeg\")",
       "Bash(curl -s -L -o hero_new.jpeg \"https://i.imgur.com/CxeBixA.jpeg\")",
-      "PowerShell(npm run build 2>&1)"
+      "PowerShell(npm run build 2>&1)",
+      "Bash(npm install *)",
+      "Bash(node -p \"require\\('./package.json'\\).dependencies.gsap\")"
     ]
   }
 }
