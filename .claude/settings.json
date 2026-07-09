@@ -28,7 +28,9 @@
       "Bash(curl -s -L -o hero_new.jpeg \"https://i.imgur.com/CxeBixA.jpeg\")",
       "PowerShell(npm run build 2>&1)",
       "Bash(npm install *)",
-      "Bash(node -p \"require\\('./package.json'\\).dependencies.gsap\")"
+      "Bash(node -p \"require\\('./package.json'\\).dependencies.gsap\")",
+      "Bash(npm uninstall *)",
+      "Bash(node -p \"JSON.stringify\\(require\\('./package.json'\\).dependencies\\)\")"
     ]
   }
 }

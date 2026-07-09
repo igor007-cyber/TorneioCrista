@@ -635,6 +635,7 @@ a {
 .plx-sponsors-marquee {
     --sponsor-gap: 56px;
     --sponsor-height: 64px;
+    --sponsor-max-width: 220px;
     overflow: hidden;
     /* Suaviza a entrada e a saída das logos nas laterais. */
     mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
@@ -656,7 +657,9 @@ a {
 
 .plx-sponsors-group img {
     height: var(--sponsor-height);
-    width: 180px;
+    width: auto;
+    /* Trava as logos mais largas (wordmarks) para não dominarem a faixa. */
+    max-width: var(--sponsor-max-width);
     object-fit: contain;
     opacity: 0.85;
     transition: opacity 0.2s ease;
@@ -847,10 +850,7 @@ a {
     .plx-sponsors-marquee {
         --sponsor-gap: 32px;
         --sponsor-height: 46px;
-    }
-
-    .plx-sponsors-group img {
-        width: 130px;
+        --sponsor-max-width: 160px;
     }
 
     .plx-hero-text,
