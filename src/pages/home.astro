@@ -1,12 +1,32 @@
 ---
+import type { ImageMetadata } from 'astro';
 import MainLayout from '../layouts/main.astro';
 import logo from '../assets/logo.png';
+import logoConecta from '../assets/image/Logo Conecta branca.png';
+import logoIcar from '../assets/image/LOGO ICAR BRANCA.png';
+import logoMariaP from '../assets/image/LOGO MARIA P.png';
+import logoPng from '../assets/image/LOGO PNG.png';
+import logoRioVerde from '../assets/image/Logo Rio Verde.png';
+import logoRogerTadeu from '../assets/image/Logo Roger e Tadeu.png';
+import logoSupri from '../assets/image/Logo Supri branca.png';
+import logoSta from '../assets/image/STA BRANCA.png';
 import './css/home.css';
 
 const navItems = [
 	{ label: 'Home', href: '/' },
 	{ label: 'Instagram', href: 'https://www.instagram.com/copacristafortaleza/' },
 	{ label: 'Jogos', href: '/vizualizarTorneio' },
+];
+
+const sponsors: { name: string; image: ImageMetadata; scale?: number }[] = [
+	{ name: 'Conecta', image: logoConecta },
+	{ name: 'ICAR', image: logoIcar },
+	{ name: 'Maria P', image: logoMariaP },
+	{ name: 'Patrocinador', image: logoPng },
+	{ name: 'Rio Verde', image: logoRioVerde },
+	{ name: 'Roger e Tadeu', image: logoRogerTadeu, scale: 2.5 },
+	{ name: 'Supri', image: logoSupri },
+	{ name: 'STA', image: logoSta, scale: 0.75 },
 ];
 
 const socialImages = [
@@ -113,6 +133,20 @@ const socialImages = [
 		</section>
 
 		<section class="plx-social-wall">
+			<div class="plx-sponsors">
+				<p class="plx-sponsors-label">Patrocinadores</p>
+				<div class="plx-sponsors-grid">
+					{sponsors.map((sponsor) => (
+						<img
+						src={sponsor.image.src}
+						alt={`Logo ${sponsor.name}`}
+						loading="lazy"
+						style={sponsor.scale ? `--sponsor-scale: ${sponsor.scale}` : undefined}
+					/>
+					))}
+				</div>
+			</div>
+
 			<div class="plx-social-title">
 				<h2>Compartilhe com #CopaCristãFortaleza</h2>
 				<p>Siga e acompanhe novidades pelo Instagram oficial.</p>

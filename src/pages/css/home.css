@@ -618,6 +618,41 @@ a {
     padding-bottom: 0;
 }
 
+.plx-sponsors {
+    padding: 0 0 44px;
+    text-align: center;
+}
+
+.plx-sponsors-label {
+    margin: 0 0 24px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: rgb(244 250 247 / 0.6);
+}
+
+.plx-sponsors-grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 32px 56px;
+}
+
+.plx-sponsors-grid img {
+    height: calc(64px * var(--sponsor-scale, 1));
+    width: auto;
+    max-width: calc(180px * var(--sponsor-scale, 1));
+    object-fit: contain;
+    opacity: 0.85;
+    transition: opacity 0.2s ease;
+}
+
+.plx-sponsors-grid img:hover {
+    opacity: 1;
+}
+
 .plx-social-title {
     padding: 0 0 30px;
     text-align: center;
@@ -794,6 +829,15 @@ a {
     .plx-banner h2,
     .plx-social-title h2 {
         font-size: 2.2rem;
+    }
+
+    .plx-sponsors-grid {
+        gap: 24px 32px;
+    }
+
+    .plx-sponsors-grid img {
+        height: calc(46px * var(--sponsor-scale, 1));
+        max-width: calc(130px * var(--sponsor-scale, 1));
     }
 
     .plx-hero-text,

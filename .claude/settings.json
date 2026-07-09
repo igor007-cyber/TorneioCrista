@@ -25,7 +25,8 @@
       "Bash(curl -s -L -o g3.jpeg \"https://i.imgur.com/E7AzcHB.jpeg\")",
       "Bash(curl -s -L -o new.jpeg \"https://i.imgur.com/psV720a.jpeg\")",
       "Bash(curl -s -L -o new2.jpeg \"https://i.imgur.com/nPeQYGT.jpeg\")",
-      "Bash(curl -s -L -o hero_new.jpeg \"https://i.imgur.com/CxeBixA.jpeg\")"
+      "Bash(curl -s -L -o hero_new.jpeg \"https://i.imgur.com/CxeBixA.jpeg\")",
+      "PowerShell(npm run build 2>&1)"
     ]
   }
 }
