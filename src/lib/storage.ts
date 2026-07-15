@@ -1,17 +1,19 @@
 // Persistência dos torneios.
 //
 // Fonte da verdade = tabela `tournaments` no Supabase (compartilhada entre todos
-// os navegadores/dispositivos e exibida na página pública). O localStorage é
-// APENAS um cache: a renderização lê dele de forma imediata (sem await) e ele
-// também serve de fallback de leitura quando o banco está indisponível. O cache
-// nunca é fonte da verdade — loadTournaments() o sobrescreve com o que vem do
-// banco e nada que exista só na memória é re-enviado (evita que um navegador
-// ressuscite ou propague torneios que não estão no Supabase).
+// os navegadores/dispositivos e exibida na página pública). O que a tela lê é uma
+// LISTA VIVA em memória, semeada pelo cache do localStorage e substituída pelo
+// que vem do banco. Nada que exista só na memória é re-enviado (evita que um
+// navegador ressuscite ou propague torneios que não estão no Supabase).
+//
+// O localStorage é só um acelerador de primeira pintura + fallback offline. Ele
+// pode falhar (aba anônima, quota) e o app precisa seguir funcionando: por isso
+// a renderização NUNCA depende de a gravação do cache ter dado certo.
 //
 // Fluxo:
 //   * leitura  → as páginas chamam loadTournaments()/loadTournament() (async) na
-//     inicialização para buscar do banco e atualizar o cache; durante a renderização
-//     usam listTournaments()/getTournament() (sync), que leem o cache.
+//     inicialização para buscar do banco e atualizar a lista viva; durante a
+//     renderização usam listTournaments()/getTournament() (sync), que leem a memória.
 //   * gravação → saveTournament() grava no cache na hora e espelha no banco
 //     (upsert) de forma assíncrona/debounced. Use saveTournamentRemote() quando
 //     precisar aguardar a confirmação do banco (ex.: criação de um torneio novo).
@@ -67,6 +69,33 @@ function writeCache(list: Tournament[]): void {
 }
 
 // ---------------------------------------------------------------------------
+// Estado em memória — o que a tela realmente lê
+// ---------------------------------------------------------------------------
+// O localStorage pode estar INDISPONÍVEL PARA ESCRITA (aba anônima do Safari/iOS,
+// quota estourada, storage bloqueado por política do navegador). Nesses casos
+// writeCache() falha silenciosamente. Se a renderização lesse direto do
+// localStorage, os torneios vindos do banco nunca chegariam à tela — a página
+// pública mostraria "nenhum torneio" mesmo com o banco respondendo certo.
+//
+// Por isso a lista viva fica em memória: é ela que listTournaments()/getTournament()
+// devolvem. O localStorage é só um cache de pintura rápida no primeiro render e
+// um fallback de leitura offline; se ele falhar, o app continua funcionando.
+
+let memory: Tournament[] | null = null;
+
+/** Lista viva. Na primeira chamada, semeia com o cache (pintura imediata). */
+function state(): Tournament[] {
+	if (memory === null) memory = readCache();
+	return memory;
+}
+
+/** Atualiza a lista viva e tenta espelhá-la no cache (best-effort). */
+function setState(list: Tournament[]): void {
+	memory = list;
+	writeCache(list);
+}
+
+// ---------------------------------------------------------------------------
 // Lápides (tombstones) — ids de torneios excluídos
 // ---------------------------------------------------------------------------
 // A sincronização re-sobe para o banco qualquer torneio que exista só no cache
@@ -75,17 +104,24 @@ function writeCache(list: Tournament[]): void {
 // As lápides marcam ids removidos para que nunca sejam re-enviados e para forçar
 // a exclusão no banco caso reapareçam (ex.: re-subidos por outro dispositivo).
 
+// Como o cache, as lápides vivem em memória e apenas espelham no localStorage —
+// assim a exclusão continua valendo na sessão mesmo sem storage gravável.
+let tombs: Set<string> | null = null;
+
 function readTombstones(): Set<string> {
+	if (tombs) return tombs;
 	try {
 		const raw = localStorage.getItem(TOMB_KEY);
 		const arr = raw ? JSON.parse(raw) : [];
-		return new Set(Array.isArray(arr) ? arr : []);
+		tombs = new Set(Array.isArray(arr) ? arr : []);
 	} catch {
-		return new Set();
+		tombs = new Set();
 	}
+	return tombs;
 }
 
 function writeTombstones(ids: Set<string>): void {
+	tombs = ids;
 	try { localStorage.setItem(TOMB_KEY, JSON.stringify([...ids])); } catch {}
 }
 
@@ -147,12 +183,12 @@ function tournamentToRow(t: Tournament): Row {
 
 export function listTournaments(): Tournament[] {
 	const tomb = readTombstones();
-	return readCache().filter(t => !tomb.has(t.id));
+	return state().filter(t => !tomb.has(t.id));
 }
 
 export function getTournament(id: string): Tournament | null {
 	if (readTombstones().has(id)) return null;
-	return readCache().find(t => t.id === id) ?? null;
+	return state().find(t => t.id === id) ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -170,8 +206,6 @@ export function getTournament(id: string): Tournament | null {
  * assim um navegador nunca ressuscita nem propaga o que só existe na sua memória.
  */
 export async function loadTournaments(): Promise<Tournament[]> {
-	const local = readCache();
-
 	const { data, error } = await supabase
 		.from('tournaments')
 		.select('*')
@@ -179,7 +213,7 @@ export async function loadTournaments(): Promise<Tournament[]> {
 
 	if (error) {
 		console.error('[storage] falha ao carregar torneios do banco:', error.message);
-		return local; // fallback offline — NÃO sobrescreve o cache
+		return listTournaments(); // fallback offline — mantém o que já está em memória
 	}
 
 	const tomb      = readTombstones();
@@ -191,12 +225,12 @@ export async function loadTournaments(): Promise<Tournament[]> {
 		if (tomb.has(t.id)) void supabase.from('tournaments').delete().eq('id', t.id);
 	}
 
-	// Banco = fonte da verdade. O cache passa a refletir exatamente o remoto.
+	// Banco = fonte da verdade. A lista viva passa a refletir exatamente o remoto.
 	const remote = remoteAll
 		.filter(t => !tomb.has(t.id))
 		.sort((a, b) => b.createdAt - a.createdAt);
 
-	writeCache(remote);
+	setState(remote);
 	return remote;
 }
 
@@ -215,9 +249,9 @@ export async function loadTournament(id: string): Promise<Tournament | null> {
 	if (!data) return null;
 
 	const t = rowToTournament(data as Row);
-	const list = readCache().filter(x => x.id !== t.id);
+	const list = state().filter(x => x.id !== t.id);
 	list.unshift(t);
-	writeCache(list);
+	setState(list);
 	return t;
 }
 
@@ -252,20 +286,20 @@ function scheduleRemoteSave(t: Tournament): void {
 
 /** Insere ou atualiza o torneio pela sua id. Mais recentes ficam no topo. */
 export function saveTournament(t: Tournament): void {
-	// 1) Cache local imediato — mantém a UI responsiva e síncrona.
-	const list = readCache();
+	// 1) Lista viva (+ cache) imediata — mantém a UI responsiva e síncrona.
+	const list = [...state()];
 	const idx  = list.findIndex(x => x.id === t.id);
 	if (idx >= 0) list[idx] = t;
 	else          list.unshift(t);
-	writeCache(list);
+	setState(list);
 
 	// 2) Espelha no banco (debounced, fire-and-forget).
 	scheduleRemoteSave(t);
 }
 
 export function deleteTournament(id: string): void {
-	// Cache local + lápide (impede que a sincronização o ressuscite).
-	writeCache(readCache().filter(t => t.id !== id));
+	// Lista viva + cache + lápide (impede que a sincronização o ressuscite).
+	setState(state().filter(t => t.id !== id));
 	addTombstone(id);
 
 	// Cancela qualquer gravação pendente que pudesse re-subir este torneio.

@@ -11,7 +11,19 @@
       "PowerShell(yarn astro build 2>&1)",
       "mcp__claude_ai_Supabase__list_projects",
       "mcp__claude_ai_Supabase__list_tables",
-      "Bash(yarn add *)"
+      "Bash(yarn add *)",
+      "Bash(node -e ' *)",
+      "Bash(npm install *)",
+      "Bash(npx playwright *)",
+      "Bash(npx astro *)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:4321/vizualizarTorneio)",
+      "Bash(node test-public.mjs)",
+      "Bash(node test-public2.mjs)",
+      "Bash(node test-detail.mjs)",
+      "Bash(npm uninstall *)",
+      "Bash(node -p \"'deps: '+Object.keys\\(require\\('./package.json'\\).dependencies\\).join\\(', '\\)\")",
+      "Bash(pkill -f \"astro dev\")"
     ]
   }
 }

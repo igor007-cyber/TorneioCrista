@@ -326,12 +326,12 @@ import MainLayout from '../layouts/main.astro';
 	}
 
 	/**
-	 * Classificação de uma fase de grupo. Com subGroups (basquete masculino:
-	 * Grupo A x Grupo B), uma tabela por grupo a partir dos jogos compartilhados.
+	 * Classificação de uma fase de grupo. Torneios antigos podem ter subGroups
+	 * (formato cruzado "Grupo A x Grupo B"): uma tabela por grupo a partir dos
+	 * jogos compartilhados. Sem subGroups, uma única tabela.
 	 */
 	function groupStandingsHtml(phase: Phase, sport: Sport, tournament: Tournament): string {
-		const noKnockout = tournament.config.sport === 'basquete' && tournament.config.gender === 'masculino';
-		const qual = noKnockout ? 0 : 2;
+		const qual = 2;   // 1º e 2º de cada grupo avançam ao mata-mata
 
 		if (phase.subGroups && phase.subGroups.length > 0) {
 			return phase.subGroups.map(sg => `
