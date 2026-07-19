@@ -199,6 +199,7 @@ import './css/tournament.css';
 					<div class="flex items-center gap-2 flex-wrap">
 						<h3 class="font-bold text-slate-900 text-lg truncate">${escapeHtml(phase.name)}</h3>
 						<span class="cc-badge ${statusClass}"><span class="cc-dot"></span>${statusText}</span>
+						${visibilityBadge(phase)}
 					</div>
 					<p class="text-sm text-slate-500 mt-0.5">
 						${isStandings
@@ -227,6 +228,9 @@ import './css/tournament.css';
 
 		const parts: string[] = [];
 
+		// Fases de mata-mata: controle de liberação para o público (fica no topo).
+		parts.push(publishControlHtml(phase));
+
 		// Grupo: mostra classificação do próprio grupo + jogos.
 		if (phase.type === 'group') {
 			parts.push(groupStandingsHtml(phase, sport, false, true));
@@ -237,6 +241,44 @@ import './css/tournament.css';
 		parts.push(matchesList(phase, sport));
 
 		return parts.join('');
+	}
+
+	/**
+	 * Fases de mata-mata começam OCULTAS do público (published !== true). Este
+	 * cartão mostra o estado atual e o botão para o organizador liberar/ocultar os
+	 * jogos na página pública. Retorna vazio para fases que não são knockout
+	 * (grupos, rodadas e classificação são sempre públicas).
+	 */
+	function publishControlHtml(phase: Phase): string {
+		if (phase.type !== 'knockout') return '';
+		const on = phase.published === true;
+		const eyeOn  = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+		const eyeOff = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 0 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
+		return `
+			<div class="cc-publish-row ${on ? 'cc-publish-on' : 'cc-publish-off'}">
+				<div class="min-w-0">
+					<p class="cc-publish-title">${on ? eyeOn : eyeOff}${on ? 'Visível para o público' : 'Oculto do público'}</p>
+					<p class="cc-publish-hint">
+						${on
+							? 'Estes jogos aparecem na página pública dos torneios.'
+							: 'Estes jogos não aparecem na página pública. Libere quando quiser divulgar os confrontos.'}
+					</p>
+				</div>
+				<button type="button" class="cc-btn ${on ? 'cc-btn-ghost' : 'cc-btn-primary'} cc-publish-toggle" data-publish-phase="${phase.id}">
+					${on ? eyeOff : eyeOn}${on ? 'Ocultar do público' : 'Liberar para o público'}
+				</button>
+			</div>
+		`;
+	}
+
+	/** Badge de estado da visibilidade pública (só faz sentido no mata-mata). */
+	function visibilityBadge(phase: Phase): string {
+		if (phase.type !== 'knockout') return '';
+		const on = phase.published === true;
+		const icon = on
+			? `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`
+			: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 0 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
+		return `<span class="cc-badge ${on ? 'cc-badge-done' : 'cc-badge-pending'}" title="${on ? 'Fase liberada na página pública' : 'Fase oculta na página pública'}">${icon}${on ? 'Público' : 'Oculto'}</span>`;
 	}
 
 	/**
@@ -264,6 +306,7 @@ import './css/tournament.css';
 					<div class="flex items-center gap-2 flex-wrap">
 						<h3 class="font-bold text-slate-900 text-xl uppercase tracking-wide">${escapeHtml(phase.name)}</h3>
 						<span class="cc-badge ${statusClass}"><span class="cc-dot"></span>${statusText}</span>
+						${visibilityBadge(phase)}
 						<span class="cc-badge cc-badge-pending" title="Para editar resultados, volte ao Modo Compacto">
 							<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
 							Somente leitura
@@ -292,6 +335,7 @@ import './css/tournament.css';
 		} else {
 			// rodada ou mata-mata: sem tabela, jogos ocupam a largura total.
 			body = `<div class="p-6">
+				${publishControlHtml(phase)}
 				<h4 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Jogos</h4>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 					${phase.matches.length > 0
@@ -598,6 +642,11 @@ import './css/tournament.css';
 			});
 		});
 
+		// Botão de liberar/ocultar a fase de mata-mata na página pública.
+		phasesEl.querySelectorAll<HTMLButtonElement>('[data-publish-phase]').forEach(btn => {
+			btn.addEventListener('click', () => handlePublishToggle(btn.dataset.publishPhase!));
+		});
+
 		// Inputs de placar (change = confirma ao sair do campo).
 		phasesEl.querySelectorAll<HTMLInputElement>('input[data-field]:not([data-standing-phase])').forEach(input => {
 			input.addEventListener('change', () => handleScoreChange(input));
@@ -667,6 +716,18 @@ import './css/tournament.css';
 		}
 
 		recomputePlayed(m, tournament.config.sport);
+		render();
+	}
+
+	/** Alterna a visibilidade pública de uma fase de mata-mata. */
+	function handlePublishToggle(phaseId: string): void {
+		if (!tournament) return;
+		const phase = tournament.phases.find(p => p.id === phaseId);
+		if (!phase || phase.type !== 'knockout') return;
+		phase.published = !(phase.published === true);
+		// Garante que a fase permaneça aberta após o re-render (modo compacto).
+		expanded.add(phase.id);
+		saveTournament(tournament);
 		render();
 	}
 

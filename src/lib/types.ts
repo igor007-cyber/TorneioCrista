@@ -59,6 +59,11 @@ export interface Phase {
 	teams:   string[];            // times envolvidos (vazio para knockout de rounds futuros)
 	matches: Match[];
 	status:  'pending' | 'in-progress' | 'completed';
+	// Visibilidade pública da fase (usada apenas em fases 'knockout': Oitavas,
+	// Quartas, Semifinal, Final). Quando ausente ou false, a fase NÃO aparece na
+	// página pública — o organizador a libera manualmente pelo botão da tela de
+	// edição. Fases de grupo / rodada / classificação são sempre públicas.
+	published?: boolean;
 	// Overrides manuais da classificação, por nome do time. Opcional.
 	manualStandings?: Record<string, ManualStanding>;
 	// Subdivisões de uma mesma fase que compartilham os jogos mas exibem

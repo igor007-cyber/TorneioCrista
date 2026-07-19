@@ -78,10 +78,35 @@ import MainLayout from '../layouts/main.astro';
 			.replace(/'/g, '&#39;');
 	}
 
+	/**
+	 * Fases de mata-mata só aparecem na visualização pública depois que o
+	 * organizador as libera (published === true) na tela de edição. As demais
+	 * fases (grupo, rodada, classificação) são sempre públicas.
+	 */
+	function isPhasePublic(phase: Phase): boolean {
+		return phase.type !== 'knockout' || phase.published === true;
+	}
+
+	function publicPhases(tournament: Tournament): Phase[] {
+		return tournament.phases.filter(isPhasePublic);
+	}
+
+	/**
+	 * O campeão do mata-mata sai da última fase (a Final). Se ela ainda não foi
+	 * liberada, o campeão não deve ser revelado no público — senão o resultado
+	 * vazaria mesmo com os jogos ocultos. Formatos sem mata-mata (corrido / grupo
+	 * único) definem o campeão pela tabela, então ele é sempre público.
+	 */
+	function isChampionPublic(tournament: Tournament): boolean {
+		const ko = tournament.phases.filter((phase) => phase.type === 'knockout');
+		if (ko.length === 0) return true;
+		return ko[ko.length - 1].published === true;
+	}
+
 	function countMatches(tournament: Tournament): { total: number; played: number } {
 		let total = 0;
 		let played = 0;
-		for (const phase of tournament.phases) {
+		for (const phase of publicPhases(tournament)) {
 			for (const match of phase.matches) {
 				total++;
 				if (match.played) played++;
@@ -154,7 +179,7 @@ import MainLayout from '../layouts/main.astro';
 		listEl.innerHTML = tournaments.map((tournament, index) => {
 			const { total, played } = countMatches(tournament);
 			const pct = total === 0 ? 0 : Math.round((played / total) * 100);
-			const isDone = tournament.champion !== null;
+			const isDone = tournament.champion !== null && isChampionPublic(tournament);
 			const isActive = tournament.id === selectedId;
 			const statusBadge = isDone
 				? `<span class="cc-badge cc-badge-done"><span class="cc-dot"></span>Concluído</span>`
@@ -245,7 +270,7 @@ import MainLayout from '../layouts/main.astro';
 					</div>
 					<div class="flex gap-2 flex-wrap">
 						<span class="cc-badge cc-badge-progress"><span class="cc-dot"></span>Visualização pública</span>
-						${current.champion
+						${current.champion && isChampionPublic(current)
 							? `<span class="cc-badge cc-badge-done"><span class="cc-dot"></span>Campeão: ${escapeHtml(current.champion)}</span>`
 							: `<span class="cc-badge cc-badge-pending"><span class="cc-dot"></span>Campeão ainda não definido</span>`}
 					</div>
@@ -253,7 +278,7 @@ import MainLayout from '../layouts/main.astro';
 			</header>
 
 			<section class="space-y-6">
-				${current.phases.map((phase, index) => phaseCardOverviewHtml(phase, sport, current, index)).join('')}
+				${publicPhases(current).map((phase, index) => phaseCardOverviewHtml(phase, sport, current, index)).join('')}
 			</section>
 		`;
 
