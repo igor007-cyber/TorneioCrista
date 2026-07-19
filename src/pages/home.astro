@@ -15,6 +15,7 @@ const navItems = [
 	{ label: 'Home', href: '/' },
 	{ label: 'Instagram', href: 'https://www.instagram.com/copacristafortaleza/' },
 	{ label: 'Jogos', href: '/vizualizarTorneio' },
+	{ label: 'Participação', href: '#churches-section' },
 ];
 
 const sponsors = [
@@ -87,8 +88,8 @@ const socialImages = [
 						Aldeota.
 					</p>
 					<div class="plx-hero-actions">
-						<a href="/login" class="plx-btn-primary">Entrar no sistema</a>
-						<a href="/vizualizarTorneio" class="plx-btn-secondary">Ver os jogos</a>
+						<a href="/vizualizarTorneio" class="plx-btn-primary">Ver os jogos</a>
+						<a href="#churches-section" class="plx-btn-secondary">Igreja que estao participando</a>
 					</div>
 				</div>
 			</div>
@@ -156,6 +157,15 @@ const socialImages = [
 					<img src={image} alt="Registro da Copa Cristã" loading="lazy" />
 				))}
 			</div>
+		</section>
+
+		<section class="plx-churches" id="churches-section">
+			<div class="plx-churches-head">
+				<p class="plx-section-kicker">Quem está na disputa</p>
+				<h2>Igrejas participantes 2026</h2>
+			
+			</div>
+			<div class="plx-churches-grid" id="churches-grid"></div>
 		</section>
 
 		<footer class="plx-footer">
@@ -235,5 +245,85 @@ const socialImages = [
 				if (!img.complete) img.addEventListener('load', build, { once: true });
 			}
 		}
+	</script>
+
+	<script>
+		import { listTournaments, loadTournaments } from '../lib/storage';
+		import { SPORT_LABEL, GENDER_LABEL } from '../lib/tournament';
+		import type { Gender, Sport } from '../lib/types';
+
+		// Ordem fixa das seis categorias exibidas. Os nomes das igrejas NÃO ficam
+		// no código: são lidos dos torneios cadastrados (config.teams) e agrupados
+		// por esporte + gênero, então a lista se mantém sozinha conforme a
+		// organização cadastra/edita os times no painel.
+		const CATEGORIES: { sport: Sport; gender: Gender; icon: string }[] = [
+			{ sport: 'futebol',  gender: 'masculino', icon: '⚽' },
+			{ sport: 'futebol',  gender: 'feminino',  icon: '⚽' },
+			{ sport: 'volei',    gender: 'masculino', icon: '🏐' },
+			{ sport: 'volei',    gender: 'feminino',  icon: '🏐' },
+			{ sport: 'basquete', gender: 'masculino', icon: '🏀' },
+			{ sport: 'basquete', gender: 'feminino',  icon: '🏀' },
+		];
+
+		const gridEl = document.getElementById('churches-grid');
+
+		function escapeHtml(value: string): string {
+			return value
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#39;');
+		}
+
+		/** Igrejas de uma categoria: junta os times de todos os torneios daquele
+		 *  esporte+gênero, remove repetidos (sem diferenciar maiúsc./minúsc.) e ordena. */
+		function churchesFor(sport: Sport, gender: Gender): string[] {
+			const seen = new Map<string, string>();
+			for (const t of listTournaments()) {
+				if (t.config.sport !== sport || t.config.gender !== gender) continue;
+				for (const raw of t.config.teams ?? []) {
+					const name = raw.trim();
+					if (!name) continue;
+					const key = name.toLocaleLowerCase('pt-BR');
+					if (!seen.has(key)) seen.set(key, name);
+				}
+			}
+			return [...seen.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+		}
+
+		function render(): void {
+			if (!gridEl) return;
+
+			gridEl.innerHTML = CATEGORIES.map(({ sport, gender, icon }) => {
+				const churches = churchesFor(sport, gender);
+				const count = churches.length;
+				const countLabel = count === 0
+					? 'Em breve'
+					: `${count} ${count === 1 ? 'igreja' : 'igrejas'}`;
+
+				const body = count === 0
+					? '<p class="plx-church-empty">Divulgação em breve.</p>'
+					: `<ul class="plx-church-list">${churches
+							.map((name) => `<li>${escapeHtml(name)}</li>`)
+							.join('')}</ul>`;
+
+				return `
+					<article class="plx-church-card is-${gender}">
+						<div class="plx-church-top">
+							<span class="plx-church-icon">${icon}</span>
+							<div class="plx-church-heading">
+								<h3>${SPORT_LABEL[sport]} <em>${GENDER_LABEL[gender]}</em></h3>
+								<span class="plx-church-count">${countLabel}</span>
+							</div>
+						</div>
+						${body}
+					</article>`;
+			}).join('');
+		}
+
+		// Pinta já com o cache local (rápido) e repinta com o que vier do banco.
+		render();
+		void loadTournaments().then(render);
 	</script>
 </MainLayout>

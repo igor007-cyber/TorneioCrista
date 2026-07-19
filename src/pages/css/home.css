@@ -5,6 +5,16 @@
     box-sizing: border-box;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
+
 body {
     margin: 0;
     overflow-x: hidden;
@@ -219,7 +229,7 @@ a {
 
 .plx-eyebrow,
 .plx-section-kicker {
-    font-size: 0.88rem;
+    font-size: 1.8rem;
     font-weight: 700;
     color: #4888ab;
     margin: 0 0 12px;
@@ -687,6 +697,148 @@ a {
     height: 240px;
 }
 
+/* ---------------------------------------------------------------------------
+   Igrejas participantes (acima do rodapé)
+   Cartões separados por esporte + categoria; masculino em azul, feminino em
+   rosé para diferenciar visualmente. Os nomes vêm dos torneios cadastrados.
+--------------------------------------------------------------------------- */
+.plx-churches {
+    padding-inline: 48px;
+    padding-top: 96px;
+    padding-bottom: 96px;
+    /* Compensa o cabeçalho fixo ao chegar pelo link "Participação" do menu. */
+    scroll-margin-top: 120px;
+}
+
+.plx-churches-head {
+    max-width: 760px;
+    margin: 0 auto 48px;
+    text-align: center;
+}
+
+.plx-churches-sub {
+    margin: 18px 0 0;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: rgb(244 250 247 / 0.72);
+}
+
+.plx-churches-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.plx-church-card {
+    --accent: #4888ab;
+    --accent-soft: rgb(72 136 171 / 0.16);
+    --accent-line: rgb(72 136 171 / 0.32);
+    display: flex;
+    flex-direction: column;
+    padding: 30px 28px;
+    background: linear-gradient(180deg, rgb(10 16 24 / 0.98), rgb(11 18 27 / 0.92));
+    border: 1px solid rgb(72 136 171 / 0.14);
+    border-top: 3px solid var(--accent);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.plx-church-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-line);
+}
+
+.plx-church-card.is-feminino {
+    --accent: #d5769c;
+    --accent-soft: rgb(213 118 156 / 0.16);
+    --accent-line: rgb(213 118 156 / 0.4);
+}
+
+.plx-church-top {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+.plx-church-icon {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    font-size: 1.7rem;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-radius: 14px;
+}
+
+.plx-church-heading h3 {
+    margin: 0;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.75rem;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+}
+
+.plx-church-heading h3 em {
+    font-style: normal;
+    color: var(--accent);
+}
+
+.plx-church-count {
+    display: inline-flex;
+    margin-top: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(244 250 247 / 0.55);
+}
+
+.plx-church-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.plx-church-list li {
+    position: relative;
+    padding: 12px 14px 12px 30px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.08rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: #f4faf7;
+    background: rgb(244 250 247 / 0.04);
+    border-left: 3px solid var(--accent);
+}
+
+.plx-church-list li::before {
+    content: '';
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    transform: translateY(-50%);
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.plx-church-empty {
+    margin: 8px 0 0;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgb(244 250 247 / 0.5);
+}
+
 .plx-footer {
     display: grid;
     grid-template-columns: 1.2fr 1fr 1fr 1fr;
@@ -717,12 +869,14 @@ a {
     .plx-matches,
     .plx-banner,
     .plx-social-wall,
+    .plx-churches,
     .plx-footer {
         padding-inline: 32px;
     }
 
     .plx-features,
     .plx-gallery-grid,
+    .plx-churches-grid,
     .plx-footer {
         grid-template-columns: 1fr 1fr;
     }
@@ -753,8 +907,18 @@ a {
     .plx-matches,
     .plx-banner,
     .plx-social-wall,
+    .plx-churches,
     .plx-footer {
         padding-inline: 20px;
+    }
+
+    .plx-churches {
+        padding-top: 64px;
+        padding-bottom: 64px;
+    }
+
+    .plx-churches-grid {
+        grid-template-columns: 1fr;
     }
 
     /* Cabeçalho: logo à esquerda, botão Entrar à direita, menu em linha própria abaixo */
@@ -908,6 +1072,7 @@ a {
     .plx-matches,
     .plx-banner,
     .plx-social-wall,
+    .plx-churches,
     .plx-footer {
         padding-inline: 14px;
     }
