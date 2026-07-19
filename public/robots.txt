@@ -1,0 +1,11 @@
+# Copa Cristã Fortaleza — regras para robôs de busca
+User-agent: *
+Allow: /
+
+# Áreas administrativas: não indexar
+Disallow: /login
+Disallow: /painel
+Disallow: /new
+Disallow: /tournament
+
+Sitemap: https://copacristafortaleza.com.br/sitemap.xml
