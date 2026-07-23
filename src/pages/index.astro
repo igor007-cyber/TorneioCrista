@@ -29,11 +29,20 @@ const sponsors = [
 	{ name: 'STA', image: logoSta },
 ];
 
+// Slides do banner. Trocam sozinhos em crossfade; a primeira entra com
+// prioridade alta porque é o LCP da página.
+const heroImages = [
+	'https://i.imgur.com/CxeBixA.jpeg',
+	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/DSC02527_resized.jpg?bwg=1784580623',
+	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/DSC02731_resized.jpg?bwg=1784580622',
+	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/DSC03593_resized.jpg?bwg=1784580620',
+];
+
 const socialImages = [
-	'https://i.imgur.com/VkV4oZo.jpeg',
-	'https://i.imgur.com/psV720a.jpeg',
-	'https://i.imgur.com/E7AzcHB.jpeg',
-	'https://i.imgur.com/nPeQYGT.jpeg',
+	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/DSC02494_resized.jpg?bwg=1784580623',
+	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/DSC03296_resized.jpg?bwg=1784580620',
+	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/DSC03513_resized.jpg?bwg=1784580620',
+	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/DSC04850_resized.jpg?bwg=1784580617',
 ];
 
 // Dados estruturados (JSON-LD) — ajudam o Google a exibir o evento com data,
@@ -109,11 +118,15 @@ const jsonLd = {
 				<a href="/login">GO</a>
 			</div>
 
-			<div class="plx-hero-media">
-				<img
-					src="https://i.imgur.com/CxeBixA.jpeg"
-					alt="Atletas da Copa Cristã em ação"
-				/>
+			<div class="plx-hero-media" data-hero-carousel>
+				{heroImages.map((image, index) => (
+					<img
+						src={image}
+						alt="Atletas da Copa Cristã em ação"
+						class={index === 0 ? 'is-active' : undefined}
+						fetchpriority={index === 0 ? 'high' : undefined}
+					/>
+				))}
 				<div class="plx-hero-overlay"></div>
 			</div>
 
@@ -163,8 +176,8 @@ const jsonLd = {
 
 			<div class="plx-story-media">
 				<img
-					src="https://i.imgur.com/Tgu7sY0.jpeg"
-					alt="Partida da Copa Cristã"
+					src="https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/DSC02482_resized.jpg?bwg=1784580623"
+					alt="Time reunido em comemoração durante a Copa Cristã"
 				/>
 
 			</div>
@@ -243,6 +256,43 @@ const jsonLd = {
 	</main>
 
 	<script>
+		// Carrossel do banner: troca automática em crossfade. O CSS cuida da
+		// transição; aqui só movemos a classe `is-active` de um slide para o outro.
+		const carousel = document.querySelector<HTMLElement>('[data-hero-carousel]');
+		const slides = carousel ? [...carousel.querySelectorAll('img')] : [];
+
+		if (slides.length > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			const HOLD_MS = 5500;
+			let current = slides.findIndex((slide) => slide.classList.contains('is-active'));
+			if (current < 0) current = 0;
+			let timer = 0;
+
+			const show = (next: number) => {
+				slides[current].classList.remove('is-active');
+				current = next;
+				slides[current].classList.add('is-active');
+			};
+
+			const advance = () => show((current + 1) % slides.length);
+
+			const start = () => {
+				clearInterval(timer);
+				timer = setInterval(advance, HOLD_MS);
+			};
+
+			// Com a aba em segundo plano o navegador estrangula o timer e as
+			// transições não rodam; parar e recomeçar evita voltar com vários
+			// slides "acumulados" trocando de uma vez.
+			document.addEventListener('visibilitychange', () => {
+				if (document.hidden) clearInterval(timer);
+				else start();
+			});
+
+			start();
+		}
+	</script>
+
+	<script>
 		import gsap from 'gsap';
 
 		const marquee = document.querySelector<HTMLElement>('[data-sponsors-marquee]');
@@ -314,6 +364,16 @@ const jsonLd = {
 				.replace(/'/g, '&#39;');
 		}
 
+		/** "W.O.", "WO", "BYE" e afins não são igrejas: são vagas de preenchimento
+		 *  usadas na chave quando o número de times é ímpar. Precisam continuar no
+		 *  torneio (senão a chave quebra), mas não podem aparecer nesta lista. */
+		function isPlaceholder(name: string): boolean {
+			const key = name
+				.toLocaleLowerCase('pt-BR')
+				.replace(/[.\s-]/g, '');
+			return key === 'wo' || key === 'bye';
+		}
+
 		/** Igrejas de uma categoria: junta os times de todos os torneios daquele
 		 *  esporte+gênero, remove repetidos (sem diferenciar maiúsc./minúsc.) e ordena. */
 		function churchesFor(sport: Sport, gender: Gender): string[] {
@@ -322,7 +382,7 @@ const jsonLd = {
 				if (t.config.sport !== sport || t.config.gender !== gender) continue;
 				for (const raw of t.config.teams ?? []) {
 					const name = raw.trim();
-					if (!name) continue;
+					if (!name || isPlaceholder(name)) continue;
 					const key = name.toLocaleLowerCase('pt-BR');
 					if (!seen.has(key)) seen.set(key, name);
 				}

@@ -30,7 +30,7 @@ a {
 }
 
 .plx-page {
-    width: min(100%, 1920px);
+    width: min(100%, 2920px);
     margin: 0 auto;
     background:
         linear-gradient(180deg, rgb(7 12 18 / 0.88), rgb(7 12 18 / 0.98)),
@@ -172,10 +172,41 @@ a {
     display: block;
 }
 
-/* Foco um pouco acima do centro para manter os rostos/comemoração à vista
-   no recorte largo do banner (a metade de baixo é quase só o piso). */
+/* Carrossel do banner: todos os slides ficam empilhados no mesmo lugar e só a
+   opacidade muda, então a troca é um crossfade contínuo (nunca há um quadro
+   vazio entre uma foto e a outra). O foco fica um pouco acima do centro para
+   manter os rostos/comemoração à vista no recorte largo (a metade de baixo é
+   quase só o piso). */
 .plx-hero-media img {
+    position: absolute;
+    inset: 0;
     object-position: center 30%;
+    opacity: 0;
+    transition: opacity 1.6s ease-in-out;
+    will-change: opacity, transform;
+}
+
+.plx-hero-media img.is-active {
+    opacity: 1;
+    /* Zoom lento enquanto o slide está visível. Como é `animation` (e não
+       `transition`), ele também roda no slide inicial, que já vem com a classe
+       vinda do servidor. */
+    animation: plx-hero-zoom 9s ease-out forwards;
+}
+
+@keyframes plx-hero-zoom {
+    from { transform: scale(1.07); }
+    to   { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .plx-hero-media img {
+        transition: none;
+    }
+
+    .plx-hero-media img.is-active {
+        animation: none;
+    }
 }
 
 .plx-banner img {

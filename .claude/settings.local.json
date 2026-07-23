@@ -23,7 +23,16 @@
       "Bash(node test-detail.mjs)",
       "Bash(npm uninstall *)",
       "Bash(node -p \"'deps: '+Object.keys\\(require\\('./package.json'\\).dependencies\\).join\\(', '\\)\")",
-      "Bash(pkill -f \"astro dev\")"
+      "Bash(pkill -f \"astro dev\")",
+      "Bash(grep -o 'plx-hero-media.\\\\{0,900\\\\}' dist/index.html)",
+      "Bash(curl -s -o story-current.jpg \"https://i.imgur.com/Tgu7sY0.jpeg\")",
+      "Bash(curl -s -o new.jpg \"https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/DSC02482_resized.jpg?bwg=1784580623\")",
+      "Bash(grep -o 'plx-story-media.\\\\{0,260\\\\}' dist/index.html)",
+      "Bash(curl -s -L \"https://pibfortaleza.org.br/fotos-primeira-fase-copa-crista-2026-colegio-7-de-setembro/\" -o galeria.html)",
+      "Bash(grep -o '28259[^,]\\\\{0,200\\\\}' galeria.html)",
+      "Bash(grep -o 'bwg_number_of_images[^<]\\\\{0,80\\\\}' galeria.html)",
+      "Bash(grep -o 'bwg_container[^>]\\\\{0,300\\\\}' galeria.html)",
+      "Bash(grep -o 'plx-social-grid.\\\\{0,700\\\\}' dist/index.html)"
     ]
   }
 }
