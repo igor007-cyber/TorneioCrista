@@ -1,0 +1,199 @@
+---
+import MainLayout from '../layouts/main.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import { getAlbums, thumbUrl } from '../lib/galeria';
+import './css/home.css';
+import './css/galeria.css';
+
+// Quantas miniaturas já vêm prontas do servidor (as demais entram sob demanda
+// pelo botão "Carregar mais", para não montar centenas de <img> de uma vez).
+const INITIAL = 24;
+
+const albums = await getAlbums();
+const totalFotos = albums.reduce((sum, album) => sum + album.images.length, 0);
+
+// Enviado ao cliente para o "carregar mais" e o lightbox. Guardamos só a URL
+// cheia; a miniatura é derivada no navegador (mesma regra do thumbUrl).
+const albumData = albums.map((album) => ({
+	slug: album.slug,
+	title: album.title,
+	images: album.images,
+}));
+---
+
+<MainLayout
+	title="Galeria de Fotos — Copa Cristã Fortaleza 2026"
+	description="Fotos oficiais da Copa Cristã Fortaleza 2026: reviva os melhores momentos da primeira fase e do segundo fim de semana de competição no Colégio 7 de Setembro."
+	type="website"
+>
+	<main class="plx-page">
+		<SiteHeader active="/galeria" />
+
+		<section class="plx-galeria-head">
+			<p class="plx-section-kicker">Galeria</p>
+			<h1>Fotos da Copa Cristã 2026</h1>
+			<p>
+				Reviva os melhores momentos da competição. São {totalFotos} registros oficiais
+				das partidas, torcidas e comemorações — clique em qualquer foto para ampliar.
+			</p>
+		</section>
+
+		{albums.map((album) => (
+			<section class="plx-galeria-album" id={album.slug}>
+				<div class="plx-block-header">
+					<div>
+						<p class="plx-section-kicker">{album.date}</p>
+						<h2>{album.title}</h2>
+						<span class="plx-galeria-count">{album.images.length} fotos</span>
+					</div>
+					<a href={album.source} target="_blank" rel="noreferrer">Ver álbum no PIB</a>
+				</div>
+
+				<div class="plx-galeria-grid" data-album-grid data-slug={album.slug} data-rendered={Math.min(INITIAL, album.images.length)}>
+					{album.images.slice(0, INITIAL).map((full, index) => (
+						<button
+							type="button"
+							class="plx-galeria-thumb"
+							data-slug={album.slug}
+							data-index={index}
+							aria-label={`Ampliar foto ${index + 1} de ${album.images.length}`}
+						>
+							<img src={thumbUrl(full)} loading="lazy" alt={`${album.title} — foto ${index + 1}`} />
+						</button>
+					))}
+				</div>
+
+				{album.images.length > INITIAL && (
+					<div class="plx-galeria-more">
+						<button type="button" class="plx-btn-secondary" data-load-more={album.slug}>
+							Carregar mais fotos
+						</button>
+					</div>
+				)}
+			</section>
+		))}
+	</main>
+
+	<!-- Visualizador em tela cheia -->
+	<div class="plx-lightbox" data-lightbox hidden>
+		<button type="button" class="plx-lightbox-close" data-lb-close aria-label="Fechar">×</button>
+		<button type="button" class="plx-lightbox-nav is-prev" data-lb-prev aria-label="Foto anterior">‹</button>
+		<figure class="plx-lightbox-figure">
+			<img data-lb-image src="" alt="" />
+			<figcaption data-lb-caption></figcaption>
+		</figure>
+		<button type="button" class="plx-lightbox-nav is-next" data-lb-next aria-label="Próxima foto">›</button>
+	</div>
+
+	<script type="application/json" data-galeria-json set:html={JSON.stringify(albumData)} is:inline />
+
+	<script>
+		interface AlbumJson { slug: string; title: string; images: string[] }
+
+		const INITIAL = 24;
+		const BATCH = 24;
+
+		const raw = document.querySelector<HTMLScriptElement>('[data-galeria-json]')?.textContent ?? '[]';
+		const albums: AlbumJson[] = JSON.parse(raw);
+		const bySlug = new Map(albums.map((a) => [a.slug, a]));
+
+		const toThumb = (full: string) => full.replace('/photo-gallery/', '/photo-gallery/thumb/');
+
+		// --- "Carregar mais": acrescenta o próximo lote de miniaturas ao grid ---
+		function makeThumb(album: AlbumJson, index: number): HTMLButtonElement {
+			const btn = document.createElement('button');
+			btn.type = 'button';
+			btn.className = 'plx-galeria-thumb';
+			btn.dataset.slug = album.slug;
+			btn.dataset.index = String(index);
+			btn.setAttribute('aria-label', `Ampliar foto ${index + 1} de ${album.images.length}`);
+			const img = document.createElement('img');
+			img.src = toThumb(album.images[index]);
+			img.loading = 'lazy';
+			img.alt = `${album.title} — foto ${index + 1}`;
+			btn.appendChild(img);
+			return btn;
+		}
+
+		for (const moreBtn of document.querySelectorAll<HTMLButtonElement>('[data-load-more]')) {
+			moreBtn.addEventListener('click', () => {
+				const slug = moreBtn.dataset.loadMore!;
+				const album = bySlug.get(slug);
+				const grid = document.querySelector<HTMLElement>(`[data-album-grid][data-slug="${slug}"]`);
+				if (!album || !grid) return;
+
+				let rendered = Number(grid.dataset.rendered ?? INITIAL);
+				const next = Math.min(rendered + BATCH, album.images.length);
+				const frag = document.createDocumentFragment();
+				for (let i = rendered; i < next; i++) frag.appendChild(makeThumb(album, i));
+				grid.appendChild(frag);
+				grid.dataset.rendered = String(next);
+
+				if (next >= album.images.length) moreBtn.remove();
+			});
+		}
+
+		// --- Lightbox ---------------------------------------------------------
+		const lb = document.querySelector<HTMLElement>('[data-lightbox]')!;
+		const lbImg = lb.querySelector<HTMLImageElement>('[data-lb-image]')!;
+		const lbCaption = lb.querySelector<HTMLElement>('[data-lb-caption]')!;
+		let currentSlug = '';
+		let currentIndex = 0;
+
+		function preload(url: string): void {
+			const img = new Image();
+			img.src = url;
+		}
+
+		function show(slug: string, index: number): void {
+			const album = bySlug.get(slug);
+			if (!album) return;
+			const total = album.images.length;
+			currentSlug = slug;
+			currentIndex = (index + total) % total; // navegação circular
+			lbImg.src = album.images[currentIndex];
+			lbImg.alt = `${album.title} — foto ${currentIndex + 1}`;
+			lbCaption.textContent = `${album.title} · ${currentIndex + 1} / ${total}`;
+			// Adianta os vizinhos para a troca ser instantânea.
+			preload(album.images[(currentIndex + 1) % total]);
+			preload(album.images[(currentIndex - 1 + total) % total]);
+		}
+
+		function openLightbox(slug: string, index: number): void {
+			show(slug, index);
+			lb.hidden = false;
+			document.body.style.overflow = 'hidden';
+		}
+
+		function closeLightbox(): void {
+			lb.hidden = true;
+			lbImg.src = '';
+			document.body.style.overflow = '';
+		}
+
+		const step = (delta: number) => show(currentSlug, currentIndex + delta);
+
+		// Clique nas miniaturas (delegação — cobre as que entram via "carregar mais").
+		for (const grid of document.querySelectorAll<HTMLElement>('[data-album-grid]')) {
+			grid.addEventListener('click', (event) => {
+				const thumb = (event.target as HTMLElement).closest<HTMLElement>('.plx-galeria-thumb');
+				if (!thumb) return;
+				openLightbox(thumb.dataset.slug!, Number(thumb.dataset.index));
+			});
+		}
+
+		lb.querySelector('[data-lb-close]')!.addEventListener('click', closeLightbox);
+		lb.querySelector('[data-lb-prev]')!.addEventListener('click', () => step(-1));
+		lb.querySelector('[data-lb-next]')!.addEventListener('click', () => step(1));
+		// Clicar no fundo (fora da imagem/botões) fecha.
+		lb.addEventListener('click', (event) => {
+			if (event.target === lb) closeLightbox();
+		});
+		document.addEventListener('keydown', (event) => {
+			if (lb.hidden) return;
+			if (event.key === 'Escape') closeLightbox();
+			else if (event.key === 'ArrowLeft') step(-1);
+			else if (event.key === 'ArrowRight') step(1);
+		});
+	</script>
+</MainLayout>

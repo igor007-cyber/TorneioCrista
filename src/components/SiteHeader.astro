@@ -1,0 +1,45 @@
+---
+// Cabeçalho do site público (home e galeria), extraído para manter o menu
+// idêntico entre as páginas. `active` é o caminho da página atual e marca o
+// item correspondente com a classe .active.
+import logo from '../assets/logo.png';
+
+interface Props {
+	active?: string;
+}
+
+const { active = '/' } = Astro.props;
+
+const navItems = [
+	{ label: 'Home', href: '/' },
+	{ label: 'Instagram', href: 'https://www.instagram.com/copacristafortaleza/' },
+	{ label: 'Jogos', href: '/vizualizarTorneio' },
+	{ label: 'Galeria', href: '/galeria' },
+	{ label: 'Participação', href: '/#churches-section' },
+];
+---
+
+<header class="plx-header">
+	<div class="plx-logo">
+		<img src={logo.src} alt="Logo Copa Cristã Fortaleza" class="plx-logo-image" />
+		<div>
+			<p>Copa Cristã</p>
+			<strong>Fortaleza</strong>
+		</div>
+	</div>
+
+	<nav class="plx-nav" aria-label="Principal">
+		{navItems.map((item) => (
+			<a
+				href={item.href}
+				target={item.href.startsWith('http') ? '_blank' : undefined}
+				rel={item.href.startsWith('http') ? 'noreferrer' : undefined}
+				class={item.href === active ? 'active' : ''}
+			>
+				{item.label}
+			</a>
+		))}
+	</nav>
+
+	<a href="/login" class="plx-menu-button">Entrar</a>
+</header>

@@ -1,5 +1,7 @@
 ---
 import MainLayout from '../layouts/main.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import { getAlbums, thumbUrl } from '../lib/galeria';
 import logo from '../assets/logo.png';
 import logoConecta from '../assets/image/Logo Conecta branca.png';
 import logoIcar from '../assets/image/LOGO ICAR BRANCA.png';
@@ -10,13 +12,6 @@ import logoRogerTadeu from '../assets/image/Logo Roger e Tadeu.png';
 import logoSupri from '../assets/image/Logo Supri branca.png';
 import logoSta from '../assets/image/STA BRANCA.png';
 import './css/home.css';
-
-const navItems = [
-	{ label: 'Home', href: '/' },
-	{ label: 'Instagram', href: 'https://www.instagram.com/copacristafortaleza/' },
-	{ label: 'Jogos', href: '/vizualizarTorneio' },
-	{ label: 'Participação', href: '#churches-section' },
-];
 
 const sponsors = [
 	{ name: 'Conecta', image: logoConecta },
@@ -44,6 +39,15 @@ const socialImages = [
 	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/DSC03513_resized.jpg?bwg=1784580620',
 	'https://pibfortaleza.org.br/wp-content/uploads/photo-gallery/DSC04850_resized.jpg?bwg=1784580617',
 ];
+
+// Prévia da galeria (mosaico + total de fotos): puxamos as primeiras imagens de
+// cada álbum automaticamente, então a home acompanha o que está em /galeria.
+const albums = await getAlbums();
+const totalFotos = albums.reduce((sum, album) => sum + album.images.length, 0);
+const galeriaPreview = albums
+	.flatMap((album) => album.images.slice(0, 4))
+	.slice(0, 8)
+	.map((full) => ({ full, thumb: thumbUrl(full) }));
 
 // Dados estruturados (JSON-LD) — ajudam o Google a exibir o evento com data,
 // local e organizador nos resultados de busca.
@@ -86,30 +90,7 @@ const jsonLd = {
 	<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} slot="head" is:inline />
 
 	<main class="plx-page">
-		<header class="plx-header">
-			<div class="plx-logo">
-				<img src={logo.src} alt="Logo Copa Cristã Fortaleza" class="plx-logo-image" />
-				<div>
-					<p>Copa Cristã</p>
-					<strong>Fortaleza</strong>
-				</div>
-			</div>
-
-			<nav class="plx-nav" aria-label="Principal">
-				{navItems.map((item, index) => (
-					<a
-						href={item.href}
-						target={item.href.startsWith('http') ? '_blank' : undefined}
-						rel={item.href.startsWith('http') ? 'noreferrer' : undefined}
-						class={index === 0 ? 'active' : ''}
-					>
-						{item.label}
-					</a>
-				))}
-			</nav>
-
-			<a href="/login" class="plx-menu-button">Entrar</a>
-		</header>
+		<SiteHeader active="/" />
 
 		<section class="plx-hero">
 			<div class="plx-side-social">
@@ -180,6 +161,28 @@ const jsonLd = {
 					alt="Time reunido em comemoração durante a Copa Cristã"
 				/>
 
+			</div>
+		</section>
+
+		<section class="plx-galeria-teaser">
+			<div class="plx-block-header">
+				<div>
+					<p class="plx-section-kicker">Galeria</p>
+					<h2>Reviva a Copa em fotos</h2>
+				</div>
+				<a href="/galeria">Ver galeria completa</a>
+			</div>
+
+			<div class="plx-galeria-teaser-grid">
+				{galeriaPreview.map((img) => (
+					<a href="/galeria" class="plx-galeria-teaser-cell" aria-label="Abrir galeria de fotos">
+						<img src={img.thumb} alt="Foto da Copa Cristã 2026" loading="lazy" />
+					</a>
+				))}
+			</div>
+
+			<div class="plx-galeria-teaser-cta">
+				<a href="/galeria" class="plx-btn-primary">Verifique a nossa galeria</a>
 			</div>
 		</section>
 

@@ -30,7 +30,20 @@
       "Bash(npm install *)",
       "Bash(node -p \"require\\('./package.json'\\).dependencies.gsap\")",
       "Bash(npm uninstall *)",
-      "Bash(node -p \"JSON.stringify\\(require\\('./package.json'\\).dependencies\\)\")"
+      "Bash(node -p \"JSON.stringify\\(require\\('./package.json'\\).dependencies\\)\")",
+      "Bash(curl -s -L \"https://pibfortaleza.org.br/fotos-segundo-fim-de-semana-copa-crista-2026/\" -o gal2.html)",
+      "Bash(grep -oE '<div class=\"bwg-item[0-9]*[^>]*>.{0,600}' p1.html)",
+      "Bash(curl -s -X POST \"https://pibfortaleza.org.br/wp-admin/admin-ajax.php?action=bwg_frontend_data\" --data \"shortcode_id=532&gallery_id=273&tag=0&album_id=0&theme_id=1&page_number_0=1&bwg_random_seed=1219830151\")",
+      "Bash(curl -s -X POST \"https://pibfortaleza.org.br/wp-admin/admin-ajax.php?action=bwg_frontend_data\" --data \"shortcode_id=532&gallery_id=273&tag=0&album_id=0&theme_id=1&page_number_0=1&bwg_random_seed=1222435992\" -o g2p1.html)",
+      "Bash(mkdir -p src/data)",
+      "Bash(cp \"C:/Users/igor-/AppData/Local/Temp/claude/d--Projetos-ao-vivo-CopaCrista/6dbe5097-6835-42f6-b75b-18d5b6ea57c9/scratchpad/galeria-snapshot.json\" src/data/galeria-snapshot.json)",
+      "Bash(node -e 'const d=require\\(\"./src/data/galeria-snapshot.json\"\\); console.log\\(Object.keys\\(d\\), d[\"primeira-fase\"].length, d[\"segundo-fim-de-semana\"].length\\)')",
+      "Bash('/c/Program Files \\(x86\\)/Microsoft/Edge/Application/msedge.exe' --headless=new --disable-gpu --no-sandbox --hide-scrollbars --window-size=1400,2200 '--screenshot=C:\\\\Users\\\\igor-\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Projetos-ao-vivo-CopaCrista\\\\6dbe5097-6835-42f6-b75b-18d5b6ea57c9\\\\scratchpad\\\\galeria.png' http://localhost:4399/galeria)",
+      "Bash('/c/Program Files \\(x86\\)/Microsoft/Edge/Application/msedge.exe' --headless=new --disable-gpu --no-sandbox --hide-scrollbars --window-size=1400,3200 '--screenshot=C:\\\\Users\\\\igor-\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Projetos-ao-vivo-CopaCrista\\\\6dbe5097-6835-42f6-b75b-18d5b6ea57c9\\\\scratchpad\\\\home.png' http://localhost:4399/)",
+      "Bash(pkill -f \"astro preview\")",
+      "Bash(pkill -f \"4399\")",
+      "Bash(xxd src/pages/css/galeria.css)",
+      "Bash(xxd src/pages/css/home.css)"
     ]
   }
 }
